@@ -18,7 +18,7 @@ import {
 import { Search, ShoppingCart, Trash2, Plus, Minus, Milk, Egg, Utensils, Coffee, Refrigerator } from 'lucide-react'
 import { getItems } from '@/lib/services/itemsService'
 import { useParams } from 'next/navigation'
-import { toast } from 'sonner'
+import { useToast } from '@/components/ui/toast'
 
 export default function SalesPage() {
     const [searchQuery, setSearchQuery] = useState('')
@@ -38,6 +38,7 @@ export default function SalesPage() {
     const params = useParams()
     const tenantId = params.tenant as string
     const [isLoading, setIsLoading] = useState(false)
+    const { showToast } = useToast()
 
     const DAIRY_CATEGORIES = [
         { name: 'Milk', icon: Milk },
@@ -74,13 +75,13 @@ export default function SalesPage() {
                     in_stock: item.stock_quantity,
                 })
                 setSearchQuery('')
-                toast.success(`Added ${item.name}`)
+                showToast(`Added ${item.name}`, 'success')
             } else {
-                toast.error('Item not found')
+                showToast('Item not found', 'error')
             }
         } catch (error) {
             console.error('Search error:', error)
-            toast.error('Failed to search items')
+            showToast('Failed to search items', 'error')
         } finally {
             setIsLoading(false)
         }
@@ -92,9 +93,9 @@ export default function SalesPage() {
             const results = await getItems(tenantId, { category })
             // For simplicity, just add the first item or show a selection (here we just log)
             console.log(`Items in ${category}:`, results)
-            toast.info(`Found ${results.length} items in ${category}`)
+            showToast(`Found ${results.length} items in ${category}`, 'info')
         } catch (error) {
-            toast.error('Failed to fetch category items')
+            showToast('Failed to fetch category items', 'error')
         } finally {
             setIsLoading(false)
         }
