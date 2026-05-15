@@ -38,28 +38,27 @@ interface NavItem {
     roles: RoleName[]
 }
 
-export function Sidebar({ tenantSlug, roleName = 'Cashier' }: SidebarProps) {
+export function Sidebar({ roleName = 'Cashier' }: SidebarProps) {
     const pathname = usePathname()
-    const baseUrl = tenantSlug ? `/${tenantSlug}` : ''
 
     const navigation: NavItem[] = [
-        { name: 'Dashboard', href: `${baseUrl}/dashboard`, icon: LayoutDashboard, group: 'main', roles: ['Admin', 'Manager'] },
-        { name: 'POS Register', href: `${baseUrl}/sales`, icon: ShoppingCart, group: 'main', roles: ['Admin', 'Manager', 'Cashier'] },
-        { name: 'Sales History', href: `${baseUrl}/sales-history`, icon: FileText, group: 'main', roles: ['Admin', 'Manager', 'Cashier'] },
-        { name: 'Items', href: `${baseUrl}/items`, icon: Package, group: 'inventory', roles: ['Admin', 'Manager'] },
-        { name: 'Receiving', href: `${baseUrl}/receiving`, icon: Package2, group: 'inventory', roles: ['Admin', 'Manager'] },
-        { name: 'Wastage', href: `${baseUrl}/wastage`, icon: Trash2, group: 'inventory', roles: ['Admin', 'Manager'] },
-        { name: 'Locations', href: `${baseUrl}/locations`, icon: MapPin, group: 'inventory', roles: ['Admin', 'Manager'] },
-        { name: 'Customers', href: `${baseUrl}/customers`, icon: Users, group: 'people', roles: ['Admin', 'Manager', 'Cashier'] },
-        { name: 'Loyalty', href: `${baseUrl}/loyalty`, icon: Award, group: 'people', roles: ['Admin', 'Manager'] },
-        { name: 'Suppliers', href: `${baseUrl}/suppliers`, icon: Truck, group: 'people', roles: ['Admin'] },
-        { name: 'Employees', href: `${baseUrl}/employees`, icon: UserCog, group: 'people', roles: ['Admin'] },
-        { name: 'Reports', href: `${baseUrl}/reports`, icon: BarChart3, group: 'reports', roles: ['Admin', 'Manager'] },
-        { name: 'Supplier Ledger', href: `${baseUrl}/ledgers/supplier`, icon: BookOpen, group: 'finance', roles: ['Admin', 'Manager'] },
-        { name: 'Customer Ledger', href: `${baseUrl}/ledgers/customer`, icon: BookOpen, group: 'finance', roles: ['Admin', 'Manager', 'Cashier'] },
-        { name: 'Expenses', href: `${baseUrl}/expenses`, icon: Wallet, group: 'finance', roles: ['Admin', 'Manager'] },
-        { name: 'Financial Summary', href: `${baseUrl}/ledgers/summary`, icon: BarChart3, group: 'finance', roles: ['Admin'] },
-        { name: 'Settings', href: `${baseUrl}/settings`, icon: Settings2, group: 'reports', roles: ['Admin'] },
+        { name: 'Dashboard', href: `/dashboard`, icon: LayoutDashboard, group: 'main', roles: ['Admin', 'Manager'] },
+        { name: 'POS Register', href: `/sales`, icon: ShoppingCart, group: 'main', roles: ['Admin', 'Manager', 'Cashier'] },
+        { name: 'Sales History', href: `/sales-history`, icon: FileText, group: 'main', roles: ['Admin', 'Manager', 'Cashier'] },
+        { name: 'Items', href: `/items`, icon: Package, group: 'inventory', roles: ['Admin', 'Manager'] },
+        { name: 'Receiving', href: `/receiving`, icon: Package2, group: 'inventory', roles: ['Admin', 'Manager'] },
+        { name: 'Wastage', href: `/wastage`, icon: Trash2, group: 'inventory', roles: ['Admin', 'Manager'] },
+        { name: 'Locations', href: `/locations`, icon: MapPin, group: 'inventory', roles: ['Admin', 'Manager'] },
+        { name: 'Customers', href: `/customers`, icon: Users, group: 'people', roles: ['Admin', 'Manager', 'Cashier'] },
+        { name: 'Loyalty', href: `/loyalty`, icon: Award, group: 'people', roles: ['Admin', 'Manager'] },
+        { name: 'Suppliers', href: `/suppliers`, icon: Truck, group: 'people', roles: ['Admin'] },
+        { name: 'Employees', href: `/employees`, icon: UserCog, group: 'people', roles: ['Admin'] },
+        { name: 'Reports', href: `/reports`, icon: BarChart3, group: 'reports', roles: ['Admin', 'Manager'] },
+        { name: 'Supplier Ledger', href: `/ledgers/supplier`, icon: BookOpen, group: 'finance', roles: ['Admin', 'Manager'] },
+        { name: 'Customer Ledger', href: `/ledgers/customer`, icon: BookOpen, group: 'finance', roles: ['Admin', 'Manager', 'Cashier'] },
+        { name: 'Expenses', href: `/expenses`, icon: Wallet, group: 'finance', roles: ['Admin', 'Manager'] },
+        { name: 'Financial Summary', href: `/ledgers/summary`, icon: BarChart3, group: 'finance', roles: ['Admin'] },
+        { name: 'Settings', href: `/settings`, icon: Settings2, group: 'reports', roles: ['Admin'] },
     ]
 
     const groups = [

@@ -7,23 +7,22 @@ import { canAccessRoute, getDefaultRoute } from '@/lib/roleUtils'
 
 interface ClientRoleGuardProps {
     routeSegment: string
-    tenantSlug: string
     children: React.ReactNode
 }
 
 /**
  * Wraps a page and redirects the user if their role doesn't allow access.
- * Usage: wrap the page content with <ClientRoleGuard routeSegment="items" tenantSlug={tenantSlug}>
+ * Usage: wrap the page content with <ClientRoleGuard routeSegment="items">
  */
-export default function ClientRoleGuard({ routeSegment, tenantSlug, children }: ClientRoleGuardProps) {
+export default function ClientRoleGuard({ routeSegment, children }: ClientRoleGuardProps) {
     const { roleName } = useRole()
     const router = useRouter()
 
     useEffect(() => {
         if (!canAccessRoute(roleName, routeSegment)) {
-            router.replace(getDefaultRoute(tenantSlug, roleName))
+            router.replace(getDefaultRoute(roleName))
         }
-    }, [roleName, routeSegment, tenantSlug, router])
+    }, [roleName, routeSegment, router])
 
     // If not allowed, render nothing while redirecting
     if (!canAccessRoute(roleName, routeSegment)) {

@@ -86,10 +86,10 @@ export function Header({ user, tenant }: HeaderProps) {
             {/* Right: Actions + User */}
             <div className="flex items-center gap-3">
                 {/* Quick New Sale button */}
-                {tenant && currentPage !== 'sales' && (
+                {currentPage !== 'sales' && (
                     <Button
                         size="sm"
-                        onClick={() => router.push(`/${tenant.slug}/sales`)}
+                        onClick={() => router.push(`/sales`)}
                         className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 transition-opacity shadow-sm"
                     >
                         <ShoppingCart className="h-3.5 w-3.5" />
@@ -118,7 +118,7 @@ export function Header({ user, tenant }: HeaderProps) {
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => router.push(`/${tenant?.slug}/settings`)} className="cursor-pointer">
+                        <DropdownMenuItem onClick={() => router.push(`/settings`)} className="cursor-pointer">
                             <Settings className="mr-2 h-4 w-4 text-gray-500" />
                             Settings
                         </DropdownMenuItem>

@@ -22,9 +22,9 @@ export const ROUTE_ROLES: Record<string, RoleName[]> = {
 /**
  * Returns the default/home route for a given role.
  */
-export function getDefaultRoute(tenantSlug: string, roleName: RoleName): string {
-    if (roleName === 'Cashier') return `/${tenantSlug}/sales`
-    return `/${tenantSlug}/dashboard`
+export function getDefaultRoute(roleName: RoleName): string {
+    if (roleName === 'Cashier') return `/sales`
+    return `/dashboard`
 }
 
 /**
