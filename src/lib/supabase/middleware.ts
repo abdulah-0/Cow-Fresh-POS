@@ -6,12 +6,18 @@ export async function updateSession(request: NextRequest) {
         request,
     })
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseAnonKey) {
         return supabaseResponse
     }
+
+    // Defensive URL normalization
+    if (!supabaseUrl.startsWith('http')) {
+        supabaseUrl = `https://${supabaseUrl}`
+    }
+    supabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '')
 
     const supabase = createServerClient(
         supabaseUrl,
