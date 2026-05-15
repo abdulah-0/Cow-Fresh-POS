@@ -242,6 +242,8 @@ export default function ReceivingFormDialog({
                                             <TableHead>Location</TableHead>
                                             <TableHead className="text-right">Current</TableHead>
                                             <TableHead className="text-right">Qty</TableHead>
+                                            <TableHead>Batch</TableHead>
+                                            <TableHead>Expiry</TableHead>
                                             <TableHead className="text-right">Cost</TableHead>
                                             <TableHead className="text-right">Price</TableHead>
                                             <TableHead className="text-right">Total</TableHead>
@@ -310,6 +312,20 @@ export default function ReceivingFormDialog({
                                                             type="number"
                                                             className="w-16 text-right"
                                                             {...register(`items.${index}.quantity_purchased`, { valueAsNumber: true })}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Input
+                                                            className="w-24"
+                                                            placeholder="Batch #"
+                                                            {...register(`items.${index}.batch_number`)}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Input
+                                                            type="date"
+                                                            className="w-32"
+                                                            {...register(`items.${index}.expiry_date`)}
                                                         />
                                                     </TableCell>
                                                     <TableCell>

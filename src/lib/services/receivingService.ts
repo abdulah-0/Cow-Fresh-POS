@@ -17,6 +17,8 @@ export interface ReceivingItemInput {
     item_unit_price: number
     discount_percent: number
     item_location: number
+    batch_number?: string
+    expiry_date?: string
 }
 
 /**
@@ -138,11 +140,16 @@ export async function createReceiving(
                 })
             }
 
-            // Update item cost price if different
-            if (item.item_cost_price) {
+            // Update item details if provided
+            const updates: any = {}
+            if (item.item_cost_price) updates.cost_price = item.item_cost_price
+            if (item.batch_number) updates.batch_number = item.batch_number
+            if (item.expiry_date) updates.expiry_date = item.expiry_date
+
+            if (Object.keys(updates).length > 0) {
                 await supabase
                     .from('items')
-                    .update({ cost_price: item.item_cost_price })
+                    .update(updates)
                     .eq('id', item.item_id)
             }
         }

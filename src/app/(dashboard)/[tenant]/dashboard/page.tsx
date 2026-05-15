@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart3, ShoppingCart, Package, Users, DollarSign, TrendingUp, ArrowUpRight, Clock } from 'lucide-react'
+import { BarChart3, ShoppingCart, Package, Users, DollarSign, TrendingUp, ArrowUpRight, Clock, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
@@ -41,6 +41,14 @@ export default async function TenantDashboardPage({ params }: DashboardPageProps
         supabase.from('items').select('id', { count: 'exact' }).eq('tenant_id', tenant.id).eq('deleted', false),
         supabase.from('customers').select('id', { count: 'exact' }).eq('tenant_id', tenant.id).eq('deleted', false),
         supabase.from('items').select('id, reorder_level, inventory(quantity)').eq('tenant_id', tenant.id).eq('deleted', false),
+        supabase.from('items')
+            .select('id, name, expiry_date, batch_number')
+            .eq('tenant_id', tenant.id)
+            .eq('deleted', false)
+            .lte('expiry_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
+            .gte('expiry_date', new Date().toISOString())
+            .order('expiry_date')
+            .limit(5)
     ])
 
     const todaysSales = salesData.data?.reduce((sum, sale) => sum + parseFloat(sale.sale_total || '0'), 0) || 0
@@ -50,6 +58,7 @@ export default async function TenantDashboardPage({ params }: DashboardPageProps
         const totalStock = (item.inventory as Array<{ quantity: number }>)?.reduce((sum, inv) => sum + inv.quantity, 0) || 0
         return totalStock <= (item.reorder_level || 0)
     }).length || 0
+    const expiringItems = expiringData.data || []
 
     const { data: recentSales } = await supabase
         .from('sales')
@@ -261,6 +270,46 @@ export default async function TenantDashboardPage({ params }: DashboardPageProps
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Expiry Alerts Row */}
+            <Card className="border-0 shadow-sm border-l-4 border-l-orange-500">
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-orange-500" />
+                        <div>
+                            <CardTitle className="text-base font-semibold text-gray-900">Expiry Alerts</CardTitle>
+                            <CardDescription className="text-xs mt-0.5">Items expiring in the next 7 days</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {expiringItems.length > 0 ? (
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                            {expiringItems.map((item: any) => {
+                                const daysLeft = Math.ceil((new Date(item.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                                return (
+                                    <div key={item.id} className="rounded-xl border border-orange-100 bg-orange-50/30 p-3">
+                                        <p className="text-sm font-semibold text-gray-900 truncate">{item.name}</p>
+                                        <p className="text-xs text-gray-500 mt-1">Batch: {item.batch_number || 'N/A'}</p>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-xs font-medium text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                                                {daysLeft} days left
+                                            </span>
+                                            <span className="text-[10px] text-gray-400">
+                                                {new Date(item.expiry_date).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <div className="py-4 text-center text-sm text-gray-500">
+                            No items expiring soon. All fresh! 🥛
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }

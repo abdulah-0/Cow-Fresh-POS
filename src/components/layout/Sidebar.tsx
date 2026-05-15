@@ -19,6 +19,7 @@ import {
     Settings2,
     BookOpen,
     Wallet,
+    Trash2,
 } from 'lucide-react'
 import type { RoleName } from '@/lib/roleUtils'
 
@@ -45,6 +46,7 @@ export function Sidebar({ tenantSlug, roleName = 'Cashier' }: SidebarProps) {
         { name: 'Sales History', href: `${baseUrl}/sales-history`, icon: FileText, group: 'main', roles: ['Admin', 'Manager', 'Cashier'] },
         { name: 'Items', href: `${baseUrl}/items`, icon: Package, group: 'inventory', roles: ['Admin', 'Manager'] },
         { name: 'Receiving', href: `${baseUrl}/receiving`, icon: Package2, group: 'inventory', roles: ['Admin', 'Manager'] },
+        { name: 'Wastage', href: `${baseUrl}/wastage`, icon: Trash2, group: 'inventory', roles: ['Admin', 'Manager'] },
         { name: 'Locations', href: `${baseUrl}/locations`, icon: MapPin, group: 'inventory', roles: ['Admin', 'Manager'] },
         { name: 'Customers', href: `${baseUrl}/customers`, icon: Users, group: 'people', roles: ['Admin', 'Manager', 'Cashier'] },
         { name: 'Loyalty', href: `${baseUrl}/loyalty`, icon: Award, group: 'people', roles: ['Admin', 'Manager'] },
@@ -81,8 +83,8 @@ export function Sidebar({ tenantSlug, roleName = 'Cashier' }: SidebarProps) {
                         <Zap className="h-5 w-5 text-white" strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h1 className="text-base font-bold text-white leading-tight">POS Cloud</h1>
-                        <p className="text-[10px] text-purple-300 font-medium tracking-wider uppercase">Point of Sale</p>
+                        <h1 className="text-base font-bold text-white leading-tight">Cow Fresh</h1>
+                        <p className="text-[10px] text-purple-300 font-medium tracking-wider uppercase">Dairy POS</p>
                     </div>
                 </div>
             </div>

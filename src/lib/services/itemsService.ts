@@ -350,6 +350,32 @@ export async function getLowStockItems(tenantId: string): Promise<any[]> {
 }
 
 /**
+ * Get items nearing expiry
+ */
+export async function getExpiringItems(tenantId: string, days: number = 7): Promise<any[]> {
+    const supabase = createClient()
+    const expiryThreshold = new Date()
+    expiryThreshold.setDate(expiryThreshold.getDate() + days)
+
+    try {
+        const { data, error } = await supabase
+            .from('items')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('deleted', false)
+            .lte('expiry_date', expiryThreshold.toISOString())
+            .gte('expiry_date', new Date().toISOString())
+            .order('expiry_date')
+
+        if (error) throw error
+        return data || []
+    } catch (error) {
+        console.error('Error fetching expiring items:', error)
+        return []
+    }
+}
+
+/**
  * Get unique categories
  */
 export async function getCategories(tenantId: string): Promise<string[]> {

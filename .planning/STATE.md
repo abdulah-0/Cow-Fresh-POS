@@ -4,7 +4,7 @@
 - **Project Name**: Cow Fresh POS
 - **Goal**: Transform general POS into Dairy specialized POS.
 - **Current Milestone**: Milestone 1
-- **Current Phase**: Phase 2 (Specialized POS Billing)
+- **Current Phase**: Phase 3 (Expiry & Inventory Management)
 
 ## Recent Progress
 - [x] Codebase mapping completed.
@@ -17,4 +17,5 @@
 
 ## Next Steps
 - [x] Phase 1: Update database schema and types.
-- [ ] Phase 2: Specialized POS Billing.
+- [x] Phase 2: Specialized POS Billing.
+- [ ] Phase 3: Expiry & Inventory Management.
