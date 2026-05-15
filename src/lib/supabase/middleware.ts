@@ -54,13 +54,17 @@ export async function updateSession(request: NextRequest) {
         request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith('/auth')
     )
 
-    if (
-        !user &&
-        !isPublicRoute
-    ) {
-        // no user, redirect to landing page
+    if (!user && !isPublicRoute) {
+        // no user, redirect to login page
         const url = request.nextUrl.clone()
-        url.pathname = '/'
+        url.pathname = '/login'
+        return NextResponse.redirect(url)
+    }
+
+    if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/')) {
+        // user is logged in, don't show login or landing page
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
         return NextResponse.redirect(url)
     }
 
