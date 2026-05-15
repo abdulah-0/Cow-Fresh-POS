@@ -4,7 +4,7 @@
 - **Project Name**: Cow Fresh POS
 - **Goal**: Transform general POS into Dairy specialized POS.
 - **Current Milestone**: Milestone 1
-- **Current Phase**: Phase 1 (Database & Model Update)
+- **Current Phase**: Phase 2 (Specialized POS Billing)
 
 ## Recent Progress
 - [x] Codebase mapping completed.
@@ -16,5 +16,5 @@
 - **Tech Stack**: Sticking with Next.js, Tailwind 4, and Supabase as per `package.json`.
 
 ## Next Steps
-- [ ] Obtain user approval for the implementation plan.
-- [ ] Start Phase 1: Update database schema and types.
+- [x] Phase 1: Update database schema and types.
+- [ ] Phase 2: Specialized POS Billing.

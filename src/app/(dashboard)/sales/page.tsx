@@ -15,7 +15,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Search, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, Plus, Minus, Milk, Egg, Utensils, Coffee, Refrigerator } from 'lucide-react'
+import { getItems } from '@/lib/services/itemsService'
+import { useParams } from 'next/navigation'
+import { toast } from 'sonner'
 
 export default function SalesPage() {
     const [searchQuery, setSearchQuery] = useState('')
@@ -32,30 +35,69 @@ export default function SalesPage() {
         clearCart,
     } = useCartStore()
 
-    // Mock function - will be replaced with actual Supabase query
+    const params = useParams()
+    const tenantId = params.tenant as string
+    const [isLoading, setIsLoading] = useState(false)
+
+    const DAIRY_CATEGORIES = [
+        { name: 'Milk', icon: Milk },
+        { name: 'Yogurt', icon: Refrigerator },
+        { name: 'Butter', icon: Utensils },
+        { name: 'Cream', icon: Coffee },
+        { name: 'Eggs', icon: Egg },
+    ]
+
     const handleSearch = async (query: string) => {
-        // TODO: Search items from Supabase with tenant filter
-        console.log('Searching for:', query)
+        if (!query.trim()) return
+        setIsLoading(true)
+        try {
+            const results = await getItems(tenantId, { search: query })
+            if (results && results.length > 0) {
+                const item = results[0]
+                addItem({
+                    item_id: item.id,
+                    name: item.name,
+                    item_number: item.item_number,
+                    description: item.description,
+                    price: item.unit_price,
+                    cost_price: item.cost_price,
+                    quantity: item.unit_type === 'piece' ? 1 : 0.5, // Default weight for non-piece items
+                    unit_type: item.unit_type,
+                    expiry_date: item.expiry_date,
+                    batch_number: item.batch_number,
+                    discount: 0,
+                    discount_type: 'percent',
+                    serialnumber: '',
+                    is_serialized: item.is_serialized,
+                    allow_alt_description: item.allow_alt_description,
+                    item_location: 1, // Default location
+                    in_stock: item.stock_quantity,
+                })
+                setSearchQuery('')
+                toast.success(`Added ${item.name}`)
+            } else {
+                toast.error('Item not found')
+            }
+        } catch (error) {
+            console.error('Search error:', error)
+            toast.error('Failed to search items')
+        } finally {
+            setIsLoading(false)
+        }
     }
 
-    const handleAddSampleItem = () => {
-        // Sample item for testing
-        addItem({
-            item_id: Date.now(),
-            name: 'Sample Product',
-            item_number: 'SAMPLE001',
-            description: 'Test product',
-            price: 29.99,
-            cost_price: 15.00,
-            quantity: 1,
-            discount: 0,
-            discount_type: 'percent',
-            serialnumber: '',
-            is_serialized: false,
-            allow_alt_description: false,
-            item_location: 1,
-            in_stock: 100,
-        })
+    const handleCategoryClick = async (category: string) => {
+        setIsLoading(true)
+        try {
+            const results = await getItems(tenantId, { category })
+            // For simplicity, just add the first item or show a selection (here we just log)
+            console.log(`Items in ${category}:`, results)
+            toast.info(`Found ${results.length} items in ${category}`)
+        } catch (error) {
+            toast.error('Failed to fetch category items')
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     return (
@@ -83,13 +125,27 @@ export default function SalesPage() {
                                 }}
                                 className="flex-1"
                             />
-                            <Button onClick={() => handleSearch(searchQuery)}>
-                                Search
+                            <Button 
+                                onClick={() => handleSearch(searchQuery)}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? '...' : 'Search'}
                             </Button>
-                            <Button variant="outline" onClick={handleAddSampleItem}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Sample
-                            </Button>
+                        </div>
+
+                        {/* Dairy Category Quick Filters */}
+                        <div className="grid grid-cols-5 gap-2 mt-4">
+                            {DAIRY_CATEGORIES.map((cat) => (
+                                <Button
+                                    key={cat.name}
+                                    variant="outline"
+                                    className="flex flex-col h-20 items-center justify-center gap-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                                    onClick={() => handleCategoryClick(cat.name)}
+                                >
+                                    <cat.icon className="h-6 w-6 text-blue-600" />
+                                    <span className="text-xs font-medium">{cat.name}</span>
+                                </Button>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>
@@ -144,23 +200,30 @@ export default function SalesPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>${item.price.toFixed(2)}</TableCell>
-                                                <TableCell>
+                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            onClick={() => updateQuantity(item.item_id, Math.max(1, item.quantity - 1))}
+                                                            onClick={() => updateQuantity(item.item_id, Math.max(0, item.quantity - (item.unit_type === 'piece' ? 1 : 0.1)))}
                                                         >
                                                             <Minus className="h-3 w-3" />
                                                         </Button>
-                                                        <span className="w-12 text-center">{item.quantity}</span>
+                                                        <Input
+                                                            type="number"
+                                                            value={item.quantity}
+                                                            onChange={(e) => updateQuantity(item.item_id, parseFloat(e.target.value) || 0)}
+                                                            className="w-20 text-center h-8"
+                                                            step={item.unit_type === 'piece' ? 1 : 0.001}
+                                                        />
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            onClick={() => updateQuantity(item.item_id, item.quantity + 1)}
+                                                            onClick={() => updateQuantity(item.item_id, item.quantity + (item.unit_type === 'piece' ? 1 : 0.1))}
                                                         >
                                                             <Plus className="h-3 w-3" />
                                                         </Button>
+                                                        <span className="text-xs text-gray-500 lowercase">{item.unit_type}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium">

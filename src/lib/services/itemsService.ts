@@ -8,6 +8,9 @@ export interface ItemInput {
     supplier_id?: number
     cost_price: number
     unit_price: number
+    unit_type?: 'liter' | 'kg' | 'gram' | 'piece'
+    expiry_date?: string
+    batch_number?: string
     reorder_level?: number
     allow_alt_description?: boolean
     is_serialized?: boolean
@@ -91,6 +94,9 @@ export async function createItem(
                 supplier_id: item.supplier_id,
                 cost_price: item.cost_price,
                 unit_price: item.unit_price,
+                unit_type: item.unit_type || 'piece',
+                expiry_date: item.expiry_date,
+                batch_number: item.batch_number,
                 reorder_level: item.reorder_level || 0,
                 allow_alt_description: item.allow_alt_description || false,
                 is_serialized: item.is_serialized || false,
@@ -150,6 +156,9 @@ export async function updateItem(itemId: number, item: Partial<ItemInput>): Prom
                 supplier_id: item.supplier_id,
                 cost_price: item.cost_price,
                 unit_price: item.unit_price,
+                unit_type: item.unit_type,
+                expiry_date: item.expiry_date,
+                batch_number: item.batch_number,
                 reorder_level: item.reorder_level,
                 allow_alt_description: item.allow_alt_description,
                 is_serialized: item.is_serialized,
