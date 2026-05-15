@@ -29,6 +29,19 @@ export default async function DashboardRedirect() {
         redirect(`/${tenant.slug}/dashboard`)
     }
 
-    // If no employee record, redirect to signup
-    redirect('/signup')
+    // If no employee record, show a clear message instead of looping
+    return (
+        <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4 text-center">
+            <h1 className="text-2xl font-bold text-gray-900">No Tenant Associated</h1>
+            <p className="mt-2 max-w-md text-gray-600">
+                Your account is authenticated but not currently associated with any dairy shop tenant. 
+                Please contact your administrator to be added to a shop.
+            </p>
+            <div className="mt-6">
+                <a href="/login" className="text-sm font-medium text-purple-600 hover:text-purple-500">
+                    Back to Login
+                </a>
+            </div>
+        </div>
+    )
 }
