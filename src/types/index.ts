@@ -113,6 +113,9 @@ export interface Item {
     description: string
     cost_price: number
     unit_price: number
+    unit_type: 'liter' | 'kg' | 'gram' | 'piece'
+    expiry_date?: string
+    batch_number?: string
     reorder_level: number
     receiving_quantity: number
     pic_id?: number
@@ -212,8 +215,22 @@ export interface Receiving {
     payment_type?: string
     reference?: string
     total_amount: number
+    items?: ReceivingItem[]
     created_at: string
     updated_at: string
+}
+
+export interface ReceivingItem {
+    id: number
+    receiving_id: number
+    item_id: number
+    description?: string
+    line: number
+    quantity_purchased: number
+    item_cost_price: number
+    item_unit_price: number
+    discount_percent: number
+    created_at: string
 }
 
 export interface InventoryTransaction {
@@ -228,6 +245,17 @@ export interface InventoryTransaction {
     created_at: string
 }
 
+export interface Wastage {
+    id: number
+    tenant_id: string
+    item_id: number
+    quantity: number
+    reason: string
+    wastage_date: string
+    employee_id?: number
+    created_at: string
+}
+
 // Cart Types for POS
 export type DiscountType = 'percent' | 'fixed'
 
@@ -239,6 +267,9 @@ export interface CartItem {
     price: number
     cost_price: number
     quantity: number
+    unit_type: 'liter' | 'kg' | 'gram' | 'piece'
+    expiry_date?: string
+    batch_number?: string
     discount: number
     discount_type: DiscountType
     serialnumber?: string
