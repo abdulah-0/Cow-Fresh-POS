@@ -1,0 +1,345 @@
+-- =====================================================
+-- COW FRESH POS - MASTER DATABASE SETUP
+-- =====================================================
+-- This script creates the entire database schema specialized for Dairy Shops.
+-- Includes: Tenants, People, Roles, Employees, Customers, Suppliers, 
+-- Items (with Expiry & Weight Units), Inventory, Sales, and Wastage.
+-- =====================================================
+
+-- Enable extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- =====================================================
+-- 1. CORE SYSTEM TABLES
+-- =====================================================
+
+-- Tenants (Businesses)
+CREATE TABLE IF NOT EXISTS tenants (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    settings JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- People (Shared base for all persons)
+CREATE TABLE IF NOT EXISTS people (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    phone_number VARCHAR(50),
+    address_1 VARCHAR(255),
+    address_2 VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(100),
+    zip VARCHAR(20),
+    country VARCHAR(100),
+    comments TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Roles & Permissions
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    permissions TEXT[] DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, name)
+);
+
+-- Employees
+CREATE TABLE IF NOT EXISTS employees (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id),
+    username VARCHAR(100) UNIQUE,
+    role_id INTEGER REFERENCES roles(id),
+    commission_rate DECIMAL(5,2) DEFAULT 0,
+    commission_type VARCHAR(20) DEFAULT 'percentage',
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 2. CUSTOMERS & LOYALTY
+-- =====================================================
+
+-- Customers
+CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    company_name VARCHAR(255),
+    account_number VARCHAR(100),
+    taxable BOOLEAN DEFAULT TRUE,
+    tax_id VARCHAR(100),
+    discount_percent DECIMAL(5,2) DEFAULT 0,
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Loyalty Program Tiers
+CREATE TABLE IF NOT EXISTS customer_tiers (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    min_points INTEGER NOT NULL DEFAULT 0,
+    discount_percent DECIMAL(5,2) DEFAULT 0,
+    color VARCHAR(7) DEFAULT '#3B82F6',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, name)
+);
+
+-- Customer Loyalty Balances
+CREATE TABLE IF NOT EXISTS loyalty_points (
+    customer_id INTEGER PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+    points INTEGER DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Loyalty History
+CREATE TABLE IF NOT EXISTS loyalty_transactions (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    points INTEGER NOT NULL,
+    transaction_type VARCHAR(20) NOT NULL,
+    reference_id INTEGER,
+    reference_type VARCHAR(50),
+    comment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 3. PRODUCTS & INVENTORY
+-- =====================================================
+
+-- Suppliers
+CREATE TABLE IF NOT EXISTS suppliers (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    company_name VARCHAR(255),
+    account_number VARCHAR(100),
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Items (Specialized for Dairy)
+CREATE TABLE IF NOT EXISTS items (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    item_number VARCHAR(100) UNIQUE NOT NULL,
+    category VARCHAR(100),
+    description TEXT,
+    cost_price DECIMAL(10,2) DEFAULT 0,
+    unit_price DECIMAL(10,2) NOT NULL,
+    unit_type VARCHAR(20) DEFAULT 'piece', -- 'liter', 'kg', 'gram', 'piece'
+    expiry_date DATE, -- Specialized for dairy freshness
+    batch_number VARCHAR(100),
+    reorder_level INTEGER DEFAULT 0,
+    allow_alt_description BOOLEAN DEFAULT FALSE,
+    is_serialized BOOLEAN DEFAULT FALSE,
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Stock Locations
+CREATE TABLE IF NOT EXISTS stock_locations (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    location_name VARCHAR(255) NOT NULL,
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, location_name)
+);
+
+-- Inventory Levels
+CREATE TABLE IF NOT EXISTS inventory (
+    id SERIAL PRIMARY KEY,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    location_id INTEGER NOT NULL REFERENCES stock_locations(id) ON DELETE CASCADE,
+    quantity DECIMAL(10,3) DEFAULT 0, -- Decimal for weight-based stock
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(item_id, location_id)
+);
+
+-- Inventory Logs
+CREATE TABLE IF NOT EXISTS inventory_transactions (
+    id SERIAL PRIMARY KEY,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    location_id INTEGER REFERENCES stock_locations(id),
+    quantity DECIMAL(10,3) NOT NULL,
+    transaction_type VARCHAR(50) NOT NULL, -- 'sale', 'receiving', 'wastage', 'adjustment'
+    reference_id INTEGER,
+    reference_type VARCHAR(50),
+    employee_id INTEGER REFERENCES employees(id),
+    comment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Wastage Tracking (New for Dairy POS)
+CREATE TABLE IF NOT EXISTS wastage (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    quantity DECIMAL(10,3) NOT NULL,
+    reason VARCHAR(255), -- 'expired', 'damaged', 'spilled'
+    wastage_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    employee_id INTEGER REFERENCES employees(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 4. SALES & BILLING
+-- =====================================================
+
+-- Sales Transactions
+CREATE TABLE IF NOT EXISTS sales (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    sale_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    customer_id INTEGER REFERENCES customers(id),
+    employee_id INTEGER REFERENCES employees(id),
+    comment TEXT,
+    invoice_number VARCHAR(100) UNIQUE,
+    sale_status VARCHAR(50) DEFAULT 'completed',
+    sale_total DECIMAL(10,2) NOT NULL,
+    tax DECIMAL(10,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Sales Line Items
+CREATE TABLE IF NOT EXISTS sales_items (
+    id SERIAL PRIMARY KEY,
+    sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id),
+    description TEXT,
+    serialnumber VARCHAR(255),
+    line INTEGER NOT NULL,
+    quantity DECIMAL(10,3) NOT NULL, -- Decimal for weight-based sales
+    item_cost_price DECIMAL(10,2) DEFAULT 0,
+    item_unit_price DECIMAL(10,2) NOT NULL,
+    discount_percent DECIMAL(5,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Sales Payments
+CREATE TABLE IF NOT EXISTS sales_payments (
+    id SERIAL PRIMARY KEY,
+    sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    payment_type VARCHAR(50) NOT NULL, -- 'cash', 'card', 'mobile_wallet'
+    payment_amount DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 5. PURCHASING & RECEIVING
+-- =====================================================
+
+-- Receivings
+CREATE TABLE IF NOT EXISTS receivings (
+    id SERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    receiving_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    supplier_id INTEGER REFERENCES suppliers(id),
+    employee_id INTEGER REFERENCES employees(id),
+    comment TEXT,
+    payment_type VARCHAR(50),
+    reference VARCHAR(100),
+    total_amount DECIMAL(10,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Receiving Line Items
+CREATE TABLE IF NOT EXISTS receivings_items (
+    id SERIAL PRIMARY KEY,
+    receiving_id INTEGER NOT NULL REFERENCES receivings(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id),
+    description TEXT,
+    line INTEGER NOT NULL,
+    quantity_purchased DECIMAL(10,3) NOT NULL,
+    item_cost_price DECIMAL(10,2) NOT NULL,
+    item_unit_price DECIMAL(10,2) NOT NULL,
+    discount_percent DECIMAL(5,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 6. INDEXES
+-- =====================================================
+
+CREATE INDEX IF NOT EXISTS idx_people_tenant ON people(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_employees_tenant ON employees(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_tenant ON suppliers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_items_tenant ON items(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_items_expiry ON items(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_sales_tenant ON sales(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_item ON inventory(item_id);
+CREATE INDEX IF NOT EXISTS idx_wastage_tenant ON wastage(tenant_id);
+
+-- =====================================================
+-- 7. DEFAULT DATA SEEDING
+-- =====================================================
+
+-- Default tenant (Cow Fresh Dairy)
+INSERT INTO tenants (id, name, slug)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Cow Fresh Dairy', 'cow-fresh')
+ON CONFLICT (id) DO NOTHING;
+
+-- Default roles
+INSERT INTO roles (tenant_id, name, description, permissions) VALUES
+('00000000-0000-0000-0000-000000000001', 'Admin', 'Full system access',
+ ARRAY['sales.view','sales.create','sales.edit','sales.delete','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.delete','inventory.adjust','customers.view','customers.create','customers.edit','customers.delete','employees.view','employees.create','employees.edit','employees.delete','reports.view','reports.export','settings.view','settings.edit','roles.manage']),
+('00000000-0000-0000-0000-000000000001', 'Manager', 'Management access',
+ ARRAY['sales.view','sales.create','sales.edit','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.adjust','customers.view','customers.create','customers.edit','employees.view','reports.view','reports.export']),
+('00000000-0000-0000-0000-000000000001', 'Cashier', 'Basic POS access',
+ ARRAY['sales.view','sales.create','inventory.view','customers.view','customers.create','reports.view'])
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+-- Customer tiers
+INSERT INTO customer_tiers (tenant_id, name, min_points, discount_percent, color) VALUES
+('00000000-0000-0000-0000-000000000001', 'Bronze', 0, 2, '#CD7F32'),
+('00000000-0000-0000-0000-000000000001', 'Silver', 500, 5, '#C0C0C0'),
+('00000000-0000-0000-0000-000000000001', 'Gold', 1000, 10, '#FFD700'),
+('00000000-0000-0000-0000-000000000001', 'Platinum', 2500, 15, '#E5E4E2'),
+('00000000-0000-0000-0000-000000000001', 'Diamond', 5000, 20, '#B9F2FF')
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+-- Default stock location
+INSERT INTO stock_locations (tenant_id, location_name)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Main Store')
+ON CONFLICT (tenant_id, location_name) DO NOTHING;
+
+-- =====================================================
+-- SUCCESS NOTIFICATION
+-- =====================================================
+
+DO $$
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE '✅ COW FRESH POS DATABASE SETUP COMPLETE!';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE '';
+    RAISE NOTICE '✅ Specialized for Dairy workflows';
+    RAISE NOTICE '✅ Weight-based pricing support enabled';
+    RAISE NOTICE '✅ Expiry & Wastage tracking enabled';
+    RAISE NOTICE '✅ Roles, Tiers, and Demo Tenant created';
+    RAISE NOTICE '';
+    RAISE NOTICE '🎉 Your Cow Fresh POS is ready for operation!';
+    RAISE NOTICE '========================================';
+END $$;
