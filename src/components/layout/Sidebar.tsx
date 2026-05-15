@@ -1,5 +1,7 @@
 'use client'
 
+import React from 'react'
+
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -104,7 +106,7 @@ export function Sidebar({ tenantSlug, roleName = 'Cashier' }: SidebarProps) {
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-4 px-3">
-                {groups.map((group) => {
+                {groups.map((group: any) => {
                     const groupItems = allowedNav.filter(item => item.group === group.key)
                     if (groupItems.length === 0) return null
                     return (
@@ -113,7 +115,7 @@ export function Sidebar({ tenantSlug, roleName = 'Cashier' }: SidebarProps) {
                                 {group.label}
                             </p>
                             <div className="space-y-0.5">
-                                {groupItems.map((item) => {
+                                {groupItems.map((item: NavItem) => {
                                     const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
                                     return (
                                         <Link

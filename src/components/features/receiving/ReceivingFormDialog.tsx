@@ -107,7 +107,7 @@ export default function ReceivingFormDialog({
 
     const calculateTotal = () => {
         if (receivingItems.length === 0) return watch('total_amount') || 0
-        return receivingItems.reduce((sum, item) => {
+        return receivingItems.reduce((sum: number, item: any) => {
             const itemTotal = item.item_unit_price * item.quantity_purchased
             const discount = itemTotal * (item.discount_percent / 100)
             return sum + (itemTotal - discount)
@@ -156,13 +156,13 @@ export default function ReceivingFormDialog({
                             <Label>Supplier</Label>
                             <Select
                                 value={watch('supplier_id')?.toString()}
-                                onValueChange={(value) => setValue('supplier_id', parseInt(value))}
+                                onValueChange={(value: string) => setValue('supplier_id', parseInt(value))}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select supplier" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {suppliers.map((supplier) => (
+                                    {suppliers.map((supplier: any) => (
                                         <SelectItem key={supplier.id} value={supplier.id.toString()}>
                                             {supplier.company_name}
                                         </SelectItem>
@@ -182,7 +182,7 @@ export default function ReceivingFormDialog({
                             <Label>Payment Type</Label>
                             <Select
                                 value={watch('payment_type')}
-                                onValueChange={(value) => setValue('payment_type', value)}
+                                onValueChange={(value: string) => setValue('payment_type', value)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select payment type" />
@@ -252,9 +252,9 @@ export default function ReceivingFormDialog({
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {fields.map((field, index) => {
+                                        {fields.map((field, index: number) => {
                                             const item = receivingItems[index]
-                                            const selectedItem = items.find(i => i.id === item.item_id)
+                                            const selectedItem = items.find((i: any) => i.id === item.item_id)
                                             const itemTotal = item.item_unit_price * item.quantity_purchased
                                             const discount = itemTotal * (item.discount_percent / 100)
                                             const total = itemTotal - discount
@@ -266,8 +266,8 @@ export default function ReceivingFormDialog({
                                                     <TableCell>
                                                         <Select
                                                             value={item.item_id?.toString()}
-                                                            onValueChange={(value) => {
-                                                                const sItem = items.find(i => i.id === parseInt(value))
+                                                            onValueChange={(value: string) => {
+                                                                const sItem = items.find((i: any) => i.id === parseInt(value))
                                                                 setValue(`items.${index}.item_id`, parseInt(value))
                                                                 if (sItem) {
                                                                     setValue(`items.${index}.item_cost_price`, sItem.cost_price)
@@ -279,7 +279,7 @@ export default function ReceivingFormDialog({
                                                                 <SelectValue placeholder="Select item" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {items.map((i) => (
+                                                                {items.map((i: any) => (
                                                                     <SelectItem key={i.id} value={i.id.toString()}>
                                                                         {i.name}
                                                                     </SelectItem>
@@ -290,13 +290,13 @@ export default function ReceivingFormDialog({
                                                     <TableCell>
                                                         <Select
                                                             value={item.item_location?.toString()}
-                                                            onValueChange={(value) => setValue(`items.${index}.item_location`, parseInt(value))}
+                                                            onValueChange={(value: string) => setValue(`items.${index}.item_location`, parseInt(value))}
                                                         >
                                                             <SelectTrigger className="w-[110px]">
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {locations.map((loc) => (
+                                                                {locations.map((loc: any) => (
                                                                     <SelectItem key={loc.id} value={loc.id.toString()}>
                                                                         {loc.location_name}
                                                                     </SelectItem>

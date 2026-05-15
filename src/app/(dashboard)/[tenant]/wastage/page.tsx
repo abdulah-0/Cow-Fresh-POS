@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getWastage } from '@/lib/services/wastageService'
+import { RecordWastageDialog } from '@/components/features/inventory/RecordWastageDialog'
 
 export default function WastagePage() {
     const params = useParams()
@@ -59,10 +60,10 @@ export default function WastagePage() {
                     <h1 className="text-3xl font-bold">Wastage Tracking</h1>
                     <p className="text-gray-500 mt-1">Monitor and record product loss due to expiry or damage</p>
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Record Wastage
-                </Button>
+                <RecordWastageDialog 
+                    tenantId={tenantId} 
+                    onSuccess={loadData} 
+                />
             </div>
 
             <Card>
@@ -93,7 +94,7 @@ export default function WastagePage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {wastageRecords.map((record) => (
+                                {wastageRecords.map((record: any) => (
                                     <TableRow key={record.id}>
                                         <TableCell>
                                             {new Date(record.wastage_date).toLocaleDateString()}

@@ -35,7 +35,7 @@ export default async function TenantDashboardPage({ params }: DashboardPageProps
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const [salesData, itemsData, customersData, lowStockData] = await Promise.all([
+    const [salesData, itemsData, customersData, lowStockData, expiringData] = await Promise.all([
         supabase.from('sales').select('sale_total').eq('tenant_id', tenant.id)
             .gte('sale_time', today.toISOString()).lt('sale_time', tomorrow.toISOString()),
         supabase.from('items').select('id', { count: 'exact' }).eq('tenant_id', tenant.id).eq('deleted', false),
@@ -51,11 +51,11 @@ export default async function TenantDashboardPage({ params }: DashboardPageProps
             .limit(5)
     ])
 
-    const todaysSales = salesData.data?.reduce((sum, sale) => sum + parseFloat(sale.sale_total || '0'), 0) || 0
+    const todaysSales = salesData.data?.reduce((sum: number, sale: any) => sum + parseFloat(sale.sale_total || '0'), 0) || 0
     const totalItems = itemsData.count || 0
     const totalCustomers = customersData.count || 0
-    const lowStockCount = lowStockData.data?.filter(item => {
-        const totalStock = (item.inventory as Array<{ quantity: number }>)?.reduce((sum, inv) => sum + inv.quantity, 0) || 0
+    const lowStockCount = lowStockData.data?.filter((item: any) => {
+        const totalStock = (item.inventory as Array<{ quantity: number }>)?.reduce((sum: number, inv: any) => sum + inv.quantity, 0) || 0
         return totalStock <= (item.reorder_level || 0)
     }).length || 0
     const expiringItems = expiringData.data || []
