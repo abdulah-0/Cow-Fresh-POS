@@ -12,6 +12,30 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =====================================================
+-- 0. CLEAN UP OLD SCHEMAS (Ensures single-store schema matches perfectly)
+-- =====================================================
+DROP TABLE IF EXISTS sales_payments CASCADE;
+DROP TABLE IF EXISTS sales_items CASCADE;
+DROP TABLE IF EXISTS sales CASCADE;
+DROP TABLE IF EXISTS wastage CASCADE;
+DROP TABLE IF EXISTS inventory_transactions CASCADE;
+DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS stock_locations CASCADE;
+DROP TABLE IF EXISTS items CASCADE;
+DROP TABLE IF EXISTS receivings_items CASCADE;
+DROP TABLE IF EXISTS receivings CASCADE;
+DROP TABLE IF EXISTS suppliers CASCADE;
+DROP TABLE IF EXISTS loyalty_transactions CASCADE;
+DROP TABLE IF EXISTS loyalty_points CASCADE;
+DROP TABLE IF EXISTS customer_tiers CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS employees CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS people CASCADE;
+DROP TABLE IF EXISTS expenses CASCADE;
+DROP TABLE IF EXISTS app_config CASCADE;
+
+-- =====================================================
 -- 1. CORE SYSTEM TABLES
 -- =====================================================
 
@@ -196,6 +220,8 @@ CREATE TABLE IF NOT EXISTS sales (
     sale_status VARCHAR(50) DEFAULT 'completed',
     sale_total DECIMAL(10,2) NOT NULL,
     tax DECIMAL(10,2) DEFAULT 0,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    discount_type VARCHAR(20) DEFAULT 'percent',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -297,6 +323,43 @@ SELECT 'Diamond', 5000, 20, '#B9F2FF' WHERE NOT EXISTS (SELECT 1 FROM customer_t
 -- Default stock location
 INSERT INTO stock_locations (location_name)
 SELECT 'Main Store' WHERE NOT EXISTS (SELECT 1 FROM stock_locations WHERE location_name = 'Main Store');
+
+-- =====================================================
+-- 5.5 EXTRA OPERATIONS & UTILITIES
+-- =====================================================
+
+-- Application Configuration
+CREATE TABLE IF NOT EXISTS app_config (
+    key VARCHAR(255) PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Expenses
+CREATE TABLE IF NOT EXISTS expenses (
+    id SERIAL PRIMARY KEY,
+    expense_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    category VARCHAR(100) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    payment_method VARCHAR(50) DEFAULT 'cash',
+    employee_id INTEGER REFERENCES employees(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Seed default app_config
+INSERT INTO app_config (key, value)
+SELECT 'company_name', 'Cow Fresh Dairy' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_name');
+
+INSERT INTO app_config (key, value)
+SELECT 'company_address', '123 Dairy Farm Lane, Milk City' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_address');
+
+INSERT INTO app_config (key, value)
+SELECT 'company_phone', '+92 300 1234567' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_phone');
+
+INSERT INTO app_config (key, value)
+SELECT 'company_email', 'info@cowfreshdairy.com' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_email');
 
 -- =====================================================
 -- SUCCESS NOTIFICATION
