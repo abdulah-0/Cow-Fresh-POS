@@ -12,8 +12,7 @@ export interface WastageInput {
  * Record product wastage
  */
 export async function recordWastage(
-    wastage: WastageInput,
-    tenantId: string
+    wastage: WastageInput
 ): Promise<any> {
     const supabase = createClient()
 
@@ -22,7 +21,6 @@ export async function recordWastage(
         const { data, error } = await supabase
             .from('wastage')
             .insert({
-                tenant_id: tenantId,
                 item_id: wastage.item_id,
                 quantity: wastage.quantity,
                 reason: wastage.reason,
@@ -52,7 +50,6 @@ export async function recordWastage(
 
             // 3. Create inventory transaction for audit
             await supabase.from('inventory_transactions').insert({
-                tenant_id: tenantId,
                 item_id: wastage.item_id,
                 location_id: invData.location_id,
                 quantity_change: -wastage.quantity,
@@ -72,7 +69,7 @@ export async function recordWastage(
 /**
  * Get wastage records
  */
-export async function getWastage(tenantId: string): Promise<any[]> {
+export async function getWastage(): Promise<any[]> {
     const supabase = createClient()
 
     try {
@@ -82,7 +79,6 @@ export async function getWastage(tenantId: string): Promise<any[]> {
                 *,
                 item:items(name, item_number)
             `)
-            .eq('tenant_id', tenantId)
             .order('wastage_date', { ascending: false })
 
         if (error) throw error

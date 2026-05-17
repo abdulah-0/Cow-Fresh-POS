@@ -8,24 +8,15 @@ import { canAccessRoute, getDefaultRoute } from '@/lib/roleUtils'
  * Will redirect unauthorised users to their default route.
  */
 export async function requireRole(
-    tenantSlug: string,
     routeSegment: string
 ): Promise<void> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/login')
 
-    const { data: tenant } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('slug', tenantSlug)
-        .single()
-
-    if (!tenant) redirect('/login')
-
-    const { roleName } = await getUserRole(user.id, tenant.id)
+    const { roleName } = await getUserRole(user.id)
 
     if (!canAccessRoute(roleName, routeSegment)) {
-        redirect(getDefaultRoute(tenantSlug, roleName))
+        redirect(getDefaultRoute(roleName))
     }
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { 
     BarChart3, 
     TrendingUp, 
@@ -13,16 +12,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { createClient } from '@/lib/supabase/client'
 import { getSalesByDateRange } from '@/lib/services/reportsService'
 import { getExpenses } from '@/lib/services/expenseService'
 import Link from 'next/link'
 
 export default function FinancialSummaryPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState({
         totalReceivable: 0,
@@ -35,64 +30,58 @@ export default function FinancialSummaryPage() {
     useEffect(() => {
         async function loadSummary() {
             setLoading(true)
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-                const supabase = createClient()
-                
-                const now = new Date()
-                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-                
-                // 1. Total Receivables (Customer Ledger Balances)
-                const { data: customerLedgers } = await supabase
-                    .from('customer_ledger_entries')
-                    .select('transaction_type, amount')
-                    .eq('tenant_id', tenant.id)
-                
-                let receivable = 0
-                customerLedgers?.forEach(e => {
-                    if (e.transaction_type === 'credit') receivable += Number(e.amount)
-                    else receivable -= Number(e.amount)
-                })
+            const supabase = createClient()
+            
+            const now = new Date()
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+            
+            // 1. Total Receivables (Customer Ledger Balances)
+            const { data: customerLedgers } = await supabase
+                .from('customer_ledger_entries')
+                .select('transaction_type, amount')
+            
+            let receivable = 0
+            customerLedgers?.forEach(e => {
+                if (e.transaction_type === 'credit') receivable += Number(e.amount)
+                else receivable -= Number(e.amount)
+            })
 
-                // 2. Total Payables (Supplier Ledger Balances)
-                const { data: supplierLedgers } = await supabase
-                    .from('supplier_ledger_entries')
-                    .select('transaction_type, amount')
-                    .eq('tenant_id', tenant.id)
-                
-                let payable = 0
-                let paidToSuppliers = 0
-                supplierLedgers?.forEach(e => {
-                    if (e.transaction_type === 'credit') payable += Number(e.amount)
-                    else {
-                        payable -= Number(e.amount)
-                        // Track payments made in the current month for cash flow
-                        paidToSuppliers += Number(e.amount)
-                    }
-                })
+            // 2. Total Payables (Supplier Ledger Balances)
+            const { data: supplierLedgers } = await supabase
+                .from('supplier_ledger_entries')
+                .select('transaction_type, amount')
+            
+            let payable = 0
+            let paidToSuppliers = 0
+            supplierLedgers?.forEach(e => {
+                if (e.transaction_type === 'credit') payable += Number(e.amount)
+                else {
+                    payable -= Number(e.amount)
+                    // Track payments made in the current month for cash flow
+                    paidToSuppliers += Number(e.amount)
+                }
+            })
 
-                // 3. Monthly Sales
-                const salesReport = await getSalesByDateRange(tenant.id, startOfMonth, now)
-                
-                // 4. Monthly Expenses
-                const expenses = await getExpenses(tenant.id, { 
-                    dateFrom: startOfMonth.toISOString()
-                })
-                const totalExp = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
+            // 3. Monthly Sales
+            const salesReport = await getSalesByDateRange(startOfMonth, now)
+            
+            // 4. Monthly Expenses
+            const expenses = await getExpenses({ 
+                dateFrom: startOfMonth.toISOString()
+            })
+            const totalExp = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
 
-                setStats({
-                    totalReceivable: receivable,
-                    totalPayable: payable,
-                    monthlySales: salesReport.totalRevenue,
-                    monthlyExpenses: totalExp,
-                    supplierPayments: paidToSuppliers
-                })
-            }
+            setStats({
+                totalReceivable: receivable,
+                totalPayable: payable,
+                monthlySales: salesReport.totalRevenue,
+                monthlyExpenses: totalExp,
+                supplierPayments: paidToSuppliers
+            })
             setLoading(false)
         }
         loadSummary()
-    }, [tenantSlug])
+    }, [])
 
     const cashFlow = stats.monthlySales - stats.monthlyExpenses - stats.supplierPayments
 

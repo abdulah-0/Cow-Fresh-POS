@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Plus, Search, Edit, Trash2, Users, BarChart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,15 +15,11 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getEmployees, deleteEmployee } from '@/lib/services/employeesService'
 import EmployeeFormDialog from '@/components/features/employees/EmployeeFormDialog'
 import ClientRoleGuard from '@/components/providers/ClientRoleGuard'
 
 export default function EmployeesPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [employees, setEmployees] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -33,25 +28,13 @@ export default function EmployeesPage() {
     const { showToast } = useToast()
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadEmployees()
-        }
-    }, [tenantId, searchQuery])
+        loadEmployees()
+    }, [searchQuery])
 
     const loadEmployees = async () => {
         setLoading(true)
         try {
-            const data = await getEmployees(tenantId, {
+            const data = await getEmployees({
                 search: searchQuery || undefined,
             })
             setEmployees(data)
@@ -221,7 +204,6 @@ export default function EmployeesPage() {
                     open={showEmployeeDialog}
                     onOpenChange={setShowEmployeeDialog}
                     employee={selectedEmployee}
-                    tenantId={tenantId}
                     onSaved={handleEmployeeSaved}
                 />
             </div>

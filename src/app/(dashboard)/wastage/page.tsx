@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Trash2, Plus, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,37 +13,21 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getWastage } from '@/lib/services/wastageService'
 import { RecordWastageDialog } from '@/components/features/inventory/RecordWastageDialog'
 
 export default function WastagePage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [wastageRecords, setWastageRecords] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadData()
-        }
-    }, [tenantId])
+        loadData()
+    }, [])
 
     const loadData = async () => {
         setLoading(true)
         try {
-            const data = await getWastage(tenantId)
+            const data = await getWastage()
             setWastageRecords(data)
         } catch (error) {
             console.error('Error loading wastage:', error)
@@ -61,7 +44,6 @@ export default function WastagePage() {
                     <p className="text-gray-500 mt-1">Monitor and record product loss due to expiry or damage</p>
                 </div>
                 <RecordWastageDialog 
-                    tenantId={tenantId} 
                     onSuccess={loadData} 
                 />
             </div>

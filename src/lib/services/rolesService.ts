@@ -9,7 +9,6 @@ export interface Permission {
 
 export interface Role {
     id: number
-    tenant_id: string
     name: string
     description: string
     permissions: string[]
@@ -85,16 +84,15 @@ export const DEFAULT_ROLES = [
 ]
 
 /**
- * Get all roles for a tenant
+ * Get all roles
  */
-export async function getRoles(tenantId: string): Promise<Role[]> {
+export async function getRoles(): Promise<Role[]> {
     const supabase = createClient()
 
     try {
         const { data, error } = await supabase
             .from('roles')
             .select('*')
-            .eq('tenant_id', tenantId)
             .order('name', { ascending: true })
 
         if (error) throw error
@@ -109,7 +107,6 @@ export async function getRoles(tenantId: string): Promise<Role[]> {
  * Create a new role
  */
 export async function createRole(
-    tenantId: string,
     name: string,
     description: string,
     permissions: string[]
@@ -120,7 +117,6 @@ export async function createRole(
         const { data, error } = await supabase
             .from('roles')
             .insert({
-                tenant_id: tenantId,
                 name,
                 description,
                 permissions,
@@ -256,15 +252,14 @@ export async function getEmployeePermissions(employeeId: number): Promise<string
 }
 
 /**
- * Initialize default roles for a tenant
+ * Initialize default roles
  */
-export async function initializeDefaultRoles(tenantId: string): Promise<void> {
+export async function initializeDefaultRoles(): Promise<void> {
     const supabase = createClient()
 
     try {
         for (const roleTemplate of DEFAULT_ROLES) {
             await createRole(
-                tenantId,
                 roleTemplate.name,
                 roleTemplate.description,
                 roleTemplate.permissions

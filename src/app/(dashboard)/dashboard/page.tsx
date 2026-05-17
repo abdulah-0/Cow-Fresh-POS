@@ -13,19 +13,8 @@ function getGreeting() {
     return 'Good evening'
 }
 
-export default async function TenantDashboardPage() {
+export default async function DashboardPage() {
     const supabase = await createClient()
-
-    // Get the single tenant
-    const { data: tenant } = await supabase
-        .from('tenants')
-        .select('id, name')
-        .eq('id', '00000000-0000-0000-0000-000000000001')
-        .single()
-
-    if (!tenant) {
-        return <div>Tenant not found</div>
-    }
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -33,14 +22,13 @@ export default async function TenantDashboardPage() {
     tomorrow.setDate(tomorrow.getDate() + 1)
 
     const [salesData, itemsData, customersData, lowStockData, expiringData] = await Promise.all([
-        supabase.from('sales').select('sale_total').eq('tenant_id', tenant.id)
+        supabase.from('sales').select('sale_total')
             .gte('sale_time', today.toISOString()).lt('sale_time', tomorrow.toISOString()),
-        supabase.from('items').select('id', { count: 'exact' }).eq('tenant_id', tenant.id).eq('deleted', false),
-        supabase.from('customers').select('id', { count: 'exact' }).eq('tenant_id', tenant.id).eq('deleted', false),
-        supabase.from('items').select('id, reorder_level, inventory(quantity)').eq('tenant_id', tenant.id).eq('deleted', false),
+        supabase.from('items').select('id', { count: 'exact' }).eq('deleted', false),
+        supabase.from('customers').select('id', { count: 'exact' }).eq('deleted', false),
+        supabase.from('items').select('id, reorder_level, inventory(quantity)').eq('deleted', false),
         supabase.from('items')
             .select('id, name, expiry_date, batch_number')
-            .eq('tenant_id', tenant.id)
             .eq('deleted', false)
             .lte('expiry_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
             .gte('expiry_date', new Date().toISOString())
@@ -60,7 +48,6 @@ export default async function TenantDashboardPage() {
     const { data: recentSales } = await supabase
         .from('sales')
         .select('id, sale_total, sale_time, customer:customers(person:people(first_name, last_name))')
-        .eq('tenant_id', tenant.id)
         .order('sale_time', { ascending: false })
         .limit(5)
 
@@ -143,7 +130,7 @@ export default async function TenantDashboardPage() {
                         {getGreeting()} 👋
                     </h1>
                     <p className="mt-0.5 text-sm text-gray-500">
-                        Here&apos;s what&apos;s happening at <span className="font-medium text-gray-700">{tenant.name}</span> today.
+                        Here&apos;s what&apos;s happening at <span className="font-medium text-gray-700">Cow Fresh Dairy</span> today.
                     </p>
                 </div>
                 <Link
@@ -310,5 +297,3 @@ export default async function TenantDashboardPage() {
         </div>
     )
 }
-
-

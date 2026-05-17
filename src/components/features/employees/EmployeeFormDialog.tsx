@@ -22,7 +22,6 @@ interface EmployeeFormDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     employee?: any
-    tenantId: string
     onSaved: () => void
 }
 
@@ -30,7 +29,6 @@ export default function EmployeeFormDialog({
     open,
     onOpenChange,
     employee,
-    tenantId,
     onSaved,
 }: EmployeeFormDialogProps) {
     const [loading, setLoading] = useState(false)
@@ -58,10 +56,10 @@ export default function EmployeeFormDialog({
 
     // Fetch roles when dialog opens
     useEffect(() => {
-        if (open && tenantId) {
-            getRoles(tenantId).then(setRoles)
+        if (open) {
+            getRoles().then(setRoles)
         }
-    }, [open, tenantId])
+    }, [open])
 
     useEffect(() => {
         if (employee) {
@@ -104,25 +102,38 @@ export default function EmployeeFormDialog({
     const onSubmit = async (data: EmployeeInput) => {
         setLoading(true)
         try {
-            let savedEmployee: any
             if (employee) {
-                savedEmployee = await updateEmployee(employee.id, data)
+                // Update existing employee (no auth changes)
+                const savedEmployee = await updateEmployee(employee.id, data)
+                if (selectedRoleId !== '') {
+                    await assignRoleToEmployee(employee.id, Number(selectedRoleId))
+                }
                 showToast('success', 'Employee updated successfully')
             } else {
-                savedEmployee = await createEmployee(data, tenantId)
-                showToast('success', 'Employee created successfully')
-            }
+                // Create new employee WITH Auth account via API
+                const response = await fetch('/api/employees/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: data.person.email,
+                        password: data.password,
+                        firstName: data.person.first_name,
+                        lastName: data.person.last_name,
+                        username: data.username,
+                        roleId: Number(selectedRoleId)
+                    })
+                })
 
-            // Assign role if one was selected
-            const empId = savedEmployee?.id ?? employee?.id
-            if (empId && selectedRoleId !== '') {
-                await assignRoleToEmployee(empId, Number(selectedRoleId))
+                const result = await response.json()
+                if (!response.ok) throw new Error(result.error || 'Failed to create employee')
+                
+                showToast('success', 'Employee and Auth account created successfully')
             }
 
             onSaved()
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving employee:', error)
-            showToast('error', 'Failed to save employee')
+            showToast('error', error.message || 'Failed to save employee')
         } finally {
             setLoading(false)
         }

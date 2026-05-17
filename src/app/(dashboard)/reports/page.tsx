@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { BarChart3, Package, AlertTriangle, TrendingUp, DollarSign } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -14,40 +13,24 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getItems, getLowStockItems } from '@/lib/services/itemsService'
 
 export default function ReportsPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [items, setItems] = useState<any[]>([])
     const [lowStockItems, setLowStockItems] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const { showToast } = useToast()
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadReports()
-        }
-    }, [tenantId])
+        loadReports()
+    }, [])
 
     const loadReports = async () => {
         setLoading(true)
         try {
             const [allItems, lowStock] = await Promise.all([
-                getItems(tenantId),
-                getLowStockItems(tenantId),
+                getItems(),
+                getLowStockItems(),
             ])
             setItems(allItems)
             setLowStockItems(lowStock)

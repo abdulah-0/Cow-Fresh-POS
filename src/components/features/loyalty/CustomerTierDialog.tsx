@@ -19,7 +19,6 @@ interface CustomerTierDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     tier?: any
-    tenantId: string
     onSaved: () => void
 }
 
@@ -34,7 +33,6 @@ export default function CustomerTierDialog({
     open,
     onOpenChange,
     tier,
-    tenantId,
     onSaved,
 }: CustomerTierDialogProps) {
     const [loading, setLoading] = useState(false)
@@ -75,7 +73,6 @@ export default function CustomerTierDialog({
                 showToast('success', 'Tier updated successfully')
             } else {
                 await createCustomerTier(
-                    tenantId,
                     data.name,
                     data.min_points,
                     data.discount_percent,

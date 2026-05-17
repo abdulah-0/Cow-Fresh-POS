@@ -65,7 +65,7 @@ export async function getCustomerAnalytics(customerId: number): Promise<any> {
 /**
  * Get top customers by total spent
  */
-export async function getTopCustomers(tenantId: string, limit: number = 10): Promise<any[]> {
+export async function getTopCustomers(limit: number = 10): Promise<any[]> {
     const supabase = createClient()
 
     try {
@@ -77,7 +77,6 @@ export async function getTopCustomers(tenantId: string, limit: number = 10): Pro
                 person:people(*),
                 sales(sale_total)
             `)
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
 
         if (error) throw error
@@ -112,7 +111,6 @@ export async function getTopCustomers(tenantId: string, limit: number = 10): Pro
  * Get sales by customer report
  */
 export async function getSalesByCustomer(
-    tenantId: string,
     dateRange?: { from: Date; to: Date }
 ): Promise<any[]> {
     const supabase = createClient()
@@ -128,7 +126,6 @@ export async function getSalesByCustomer(
                 ),
                 sales_items(*)
             `)
-            .eq('tenant_id', tenantId)
             .not('customer_id', 'is', null)
             .order('sale_time', { ascending: false })
 

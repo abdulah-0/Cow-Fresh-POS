@@ -12,14 +12,13 @@ interface CompanyInfo {
 /**
  * Get company information from app_config
  */
-export async function getCompanyInfo(tenantId: string): Promise<CompanyInfo> {
+export async function getCompanyInfo(): Promise<CompanyInfo> {
     const supabase = createClient()
 
     try {
         const { data, error } = await supabase
             .from('app_config')
             .select('key, value')
-            .eq('tenant_id', tenantId)
             .in('key', ['company_name', 'company_address', 'company_phone', 'company_email', 'tax_id'])
 
         if (error) throw error
@@ -235,7 +234,7 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo): strin
 /**
  * Print receipt in a new window
  */
-export async function printReceipt(saleId: number, tenantId: string): Promise<void> {
+export async function printReceipt(saleId: number): Promise<void> {
     const supabase = createClient()
 
     // Fetch complete sale data
@@ -261,7 +260,7 @@ export async function printReceipt(saleId: number, tenantId: string): Promise<vo
         throw new Error('Failed to fetch sale data')
     }
 
-    const companyInfo = await getCompanyInfo(tenantId)
+    const companyInfo = await getCompanyInfo()
     const html = generateReceiptHTML(sale as Sale, companyInfo)
 
     const printWindow = window.open('', '_blank', 'width=400,height=600')

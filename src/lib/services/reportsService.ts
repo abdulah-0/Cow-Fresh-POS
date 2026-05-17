@@ -19,7 +19,6 @@ export interface SalesByPeriod {
  * Get daily sales summary
  */
 export async function getDailySalesSummary(
-    tenantId: string,
     date: Date = new Date()
 ): Promise<SalesReport> {
     const supabase = createClient()
@@ -37,7 +36,6 @@ export async function getDailySalesSummary(
                 *,
                 sales_items(quantity, item_unit_price, discount_percent)
             `)
-            .eq('tenant_id', tenantId)
             .gte('sale_time', startOfDay.toISOString())
             .lte('sale_time', endOfDay.toISOString())
 
@@ -54,7 +52,6 @@ export async function getDailySalesSummary(
  * Get sales by date range
  */
 export async function getSalesByDateRange(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<SalesReport> {
@@ -67,7 +64,6 @@ export async function getSalesByDateRange(
                 *,
                 sales_items(quantity, item_unit_price, discount_percent)
             `)
-            .eq('tenant_id', tenantId)
             .gte('sale_time', startDate.toISOString())
             .lte('sale_time', endDate.toISOString())
 
@@ -84,7 +80,6 @@ export async function getSalesByDateRange(
  * Get sales by employee
  */
 export async function getSalesByEmployee(
-    tenantId: string,
     employeeId: number,
     startDate: Date,
     endDate: Date
@@ -98,7 +93,6 @@ export async function getSalesByEmployee(
                 *,
                 sales_items(quantity, item_unit_price, discount_percent)
             `)
-            .eq('tenant_id', tenantId)
             .eq('employee_id', employeeId)
             .gte('sale_time', startDate.toISOString())
             .lte('sale_time', endDate.toISOString())
@@ -116,7 +110,6 @@ export async function getSalesByEmployee(
  * Get sales by customer
  */
 export async function getSalesByCustomer(
-    tenantId: string,
     customerId: number,
     startDate: Date,
     endDate: Date
@@ -130,7 +123,6 @@ export async function getSalesByCustomer(
                 *,
                 sales_items(quantity, item_unit_price, discount_percent)
             `)
-            .eq('tenant_id', tenantId)
             .eq('customer_id', customerId)
             .gte('sale_time', startDate.toISOString())
             .lte('sale_time', endDate.toISOString())
@@ -148,7 +140,6 @@ export async function getSalesByCustomer(
  * Get sales by item
  */
 export async function getSalesByItem(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<Array<{ itemId: number; itemName: string; quantity: number; revenue: number }>> {
@@ -160,9 +151,8 @@ export async function getSalesByItem(
             .select(`
                 *,
                 item:items(name),
-                sale:sales!inner(tenant_id, sale_time)
+                sale:sales!inner(sale_time)
             `)
-            .eq('sale.tenant_id', tenantId)
             .gte('sale.sale_time', startDate.toISOString())
             .lte('sale.sale_time', endDate.toISOString())
 
@@ -196,7 +186,6 @@ export async function getSalesByItem(
  * Get payment method breakdown
  */
 export async function getPaymentMethodBreakdown(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<Array<{ paymentType: string; count: number; total: number }>> {
@@ -207,9 +196,8 @@ export async function getPaymentMethodBreakdown(
             .from('sales_payments')
             .select(`
                 *,
-                sale:sales!inner(tenant_id, sale_time)
+                sale:sales!inner(sale_time)
             `)
-            .eq('sale.tenant_id', tenantId)
             .gte('sale.sale_time', startDate.toISOString())
             .lte('sale.sale_time', endDate.toISOString())
 
@@ -238,7 +226,6 @@ export async function getPaymentMethodBreakdown(
  * Get hourly sales analysis
  */
 export async function getHourlySalesAnalysis(
-    tenantId: string,
     date: Date
 ): Promise<Array<{ hour: number; sales: number; revenue: number }>> {
     const supabase = createClient()
@@ -253,7 +240,6 @@ export async function getHourlySalesAnalysis(
         const { data: sales, error } = await supabase
             .from('sales')
             .select('sale_time, sale_total')
-            .eq('tenant_id', tenantId)
             .gte('sale_time', startOfDay.toISOString())
             .lte('sale_time', endOfDay.toISOString())
 

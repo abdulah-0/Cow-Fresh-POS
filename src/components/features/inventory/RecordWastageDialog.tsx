@@ -27,11 +27,10 @@ import { getItems } from '@/lib/services/itemsService'
 import { useToast } from '@/components/ui/toast'
 
 interface RecordWastageDialogProps {
-    tenantId: string
     onSuccess: () => void
 }
 
-export function RecordWastageDialog({ tenantId, onSuccess }: RecordWastageDialogProps) {
+export function RecordWastageDialog({ onSuccess }: RecordWastageDialogProps) {
     const [open, setOpen] = useState(false)
     const [items, setItems] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
@@ -48,14 +47,14 @@ export function RecordWastageDialog({ tenantId, onSuccess }: RecordWastageDialog
     })
 
     useEffect(() => {
-        if (open && tenantId) {
+        if (open) {
             loadItems()
         }
-    }, [open, tenantId])
+    }, [open])
 
     const loadItems = async () => {
         try {
-            const data = await getItems(tenantId)
+            const data = await getItems()
             setItems(data)
         } catch (error) {
             console.error('Error loading items:', error)
@@ -79,7 +78,7 @@ export function RecordWastageDialog({ tenantId, onSuccess }: RecordWastageDialog
                 quantity: parseFloat(data.quantity),
                 reason: reason,
                 wastage_date: data.wastage_date
-            }, tenantId)
+            })
             
             showToast('Wastage recorded successfully', 'success')
             setOpen(false)

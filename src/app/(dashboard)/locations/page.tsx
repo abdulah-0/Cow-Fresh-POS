@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Plus, MapPin, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +14,6 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import {
     getStockLocations,
     createStockLocation,
@@ -23,9 +21,6 @@ import {
 } from '@/lib/services/inventoryService'
 
 export default function LocationsPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [locations, setLocations] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [newLocationName, setNewLocationName] = useState('')
@@ -33,25 +28,13 @@ export default function LocationsPage() {
     const { showToast } = useToast()
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadLocations()
-        }
-    }, [tenantId])
+        loadLocations()
+    }, [])
 
     const loadLocations = async () => {
         setLoading(true)
         try {
-            const data = await getStockLocations(tenantId)
+            const data = await getStockLocations()
             setLocations(data)
         } catch (error) {
             console.error('Error loading locations:', error)
@@ -66,7 +49,7 @@ export default function LocationsPage() {
 
         setAdding(true)
         try {
-            await createStockLocation(tenantId, newLocationName.trim())
+            await createStockLocation(newLocationName.trim())
             showToast('success', 'Location created successfully')
             setNewLocationName('')
             loadLocations()

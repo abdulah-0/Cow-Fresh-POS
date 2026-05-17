@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { 
     BookOpen, 
     Plus, 
@@ -38,14 +37,10 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getSuppliers } from '@/lib/services/receivingService'
 import { getSupplierLedger, addSupplierLedgerEntry, calculateLedgerSummary, LedgerEntry } from '@/lib/services/ledgerService'
 
 export default function SupplierLedgerPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [suppliers, setSuppliers] = useState<any[]>([])
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>('')
     const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
@@ -62,29 +57,25 @@ export default function SupplierLedgerPage() {
     })
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-                const suppliersData = await getSuppliers(tenant.id)
-                setSuppliers(suppliersData)
-            }
+        async function loadSuppliers() {
+            const suppliersData = await getSuppliers()
+            setSuppliers(suppliersData)
         }
-        loadTenant()
-    }, [tenantSlug])
+        loadSuppliers()
+    }, [])
 
     useEffect(() => {
-        if (tenantId && selectedSupplierId) {
+        if (selectedSupplierId) {
             loadLedger()
         } else {
             setLedgerEntries([])
         }
-    }, [tenantId, selectedSupplierId])
+    }, [selectedSupplierId])
 
     const loadLedger = async () => {
         setLoading(true)
         try {
-            const data = await getSupplierLedger(tenantId, parseInt(selectedSupplierId))
+            const data = await getSupplierLedger(parseInt(selectedSupplierId))
             setLedgerEntries(data)
         } catch (error) {
             console.error('Error loading ledger:', error)
@@ -100,7 +91,6 @@ export default function SupplierLedgerPage() {
         setLoading(true)
         try {
             await addSupplierLedgerEntry({
-                tenant_id: tenantId,
                 supplier_id: parseInt(selectedSupplierId),
                 transaction_type: newEntry.transaction_type,
                 amount: parseFloat(newEntry.amount),

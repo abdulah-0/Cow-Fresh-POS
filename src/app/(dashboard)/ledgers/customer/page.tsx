@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { 
     BookOpen, 
     Plus, 
@@ -38,14 +37,10 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getCustomers } from '@/lib/services/customersService'
 import { getCustomerLedger, addCustomerLedgerEntry, calculateLedgerSummary, LedgerEntry } from '@/lib/services/ledgerService'
 
 export default function CustomerLedgerPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [customers, setCustomers] = useState<any[]>([])
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
     const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
@@ -62,29 +57,25 @@ export default function CustomerLedgerPage() {
     })
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-                const customersData = await getCustomers(tenant.id)
-                setCustomers(customersData)
-            }
+        async function loadCustomers() {
+            const customersData = await getCustomers()
+            setCustomers(customersData)
         }
-        loadTenant()
-    }, [tenantSlug])
+        loadCustomers()
+    }, [])
 
     useEffect(() => {
-        if (tenantId && selectedCustomerId) {
+        if (selectedCustomerId) {
             loadLedger()
         } else {
             setLedgerEntries([])
         }
-    }, [tenantId, selectedCustomerId])
+    }, [selectedCustomerId])
 
     const loadLedger = async () => {
         setLoading(true)
         try {
-            const data = await getCustomerLedger(tenantId, parseInt(selectedCustomerId))
+            const data = await getCustomerLedger(parseInt(selectedCustomerId))
             setLedgerEntries(data)
         } catch (error) {
             console.error('Error loading ledger:', error)
@@ -100,7 +91,6 @@ export default function CustomerLedgerPage() {
         setLoading(true)
         try {
             await addCustomerLedgerEntry({
-                tenant_id: tenantId,
                 customer_id: parseInt(selectedCustomerId),
                 transaction_type: newEntry.transaction_type,
                 amount: parseFloat(newEntry.amount),

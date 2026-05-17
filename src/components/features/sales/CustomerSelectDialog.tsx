@@ -25,7 +25,6 @@ import CustomerFormDialog from '@/components/features/customers/CustomerFormDial
 
 interface CustomerWithPerson {
     id: number
-    tenant_id: string
     person_id: number
     company_name?: string
     account_number?: string
@@ -46,14 +45,12 @@ interface CustomerSelectDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onSelectCustomer: (customer: CustomerWithPerson) => void
-    tenantId: string
 }
 
 export default function CustomerSelectDialog({
     open,
     onOpenChange,
     onSelectCustomer,
-    tenantId,
 }: CustomerSelectDialogProps) {
     const [searchQuery, setSearchQuery] = useState('')
     const [customers, setCustomers] = useState<CustomerWithPerson[]>([])
@@ -62,7 +59,7 @@ export default function CustomerSelectDialog({
     const [showCustomerForm, setShowCustomerForm] = useState(false)
 
     const searchCustomers = useCallback(async (query: string) => {
-        if (!query.trim() || !tenantId) {
+        if (!query.trim()) {
             setCustomers([])
             return
         }
@@ -83,7 +80,6 @@ export default function CustomerSelectDialog({
                         email
                     )
                 `)
-                .eq('tenant_id', tenantId)
                 .eq('deleted', false)
                 .or(`company_name.ilike.%${query}%,person.first_name.ilike.%${query}%,person.last_name.ilike.%${query}%,person.phone_number.ilike.%${query}%`)
                 .limit(20)
@@ -98,7 +94,7 @@ export default function CustomerSelectDialog({
         } finally {
             setLoading(false)
         }
-    }, [tenantId])
+    }, [])
 
     // Debounced search
     useEffect(() => {
@@ -268,7 +264,6 @@ export default function CustomerSelectDialog({
             <CustomerFormDialog
                 open={showCustomerForm}
                 onOpenChange={setShowCustomerForm}
-                tenantId={tenantId}
                 onSaved={handleCustomerSaved}
             />
         </>

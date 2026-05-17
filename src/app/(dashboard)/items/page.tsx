@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Plus, Search, Edit, Trash2, Package, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,16 +15,12 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getItems, deleteItem } from '@/lib/services/itemsService'
 import ItemFormDialog from '@/components/features/items/ItemFormDialog'
 import BulkUploadDialog from '@/components/features/items/BulkUploadDialog'
 import ClientRoleGuard from '@/components/providers/ClientRoleGuard'
 
 export default function ItemsPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [items, setItems] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -37,23 +32,10 @@ export default function ItemsPage() {
     const [showBulkUpload, setShowBulkUpload] = useState(false)
     const { showToast } = useToast()
 
-    // Load tenant ID
-    useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
     // Load items
     useEffect(() => {
-        if (tenantId) {
-            loadItems()
-        }
-    }, [tenantId, searchQuery, currentPage])
+        loadItems()
+    }, [searchQuery, currentPage])
 
     // Reset to page 1 on search
     useEffect(() => {
@@ -63,7 +45,7 @@ export default function ItemsPage() {
     const loadItems = async () => {
         setLoading(true)
         try {
-            const { data, count } = await getItems(tenantId, {
+            const { data, count } = await getItems({
                 search: searchQuery || undefined,
                 paginated: true,
                 page: currentPage,
@@ -298,7 +280,6 @@ export default function ItemsPage() {
                     open={showItemDialog}
                     onOpenChange={setShowItemDialog}
                     item={selectedItem}
-                    tenantId={tenantId}
                     onSaved={handleItemSaved}
                 />
 
@@ -306,7 +287,6 @@ export default function ItemsPage() {
                 <BulkUploadDialog
                     open={showBulkUpload}
                     onOpenChange={setShowBulkUpload}
-                    tenantId={tenantId}
                     onUploaded={loadItems}
                 />
             </div>

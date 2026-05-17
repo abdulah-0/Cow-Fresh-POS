@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
 import { useCartStore } from '@/store/cartStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +19,6 @@ import { Search, ShoppingCart, Trash2, Plus, Minus, User, KeyboardIcon } from 'l
 import ItemSearchDialog from '@/components/features/sales/ItemSearchDialog'
 import PaymentDialog from '@/components/features/sales/PaymentDialog'
 import CustomerSelectDialog from '@/components/features/sales/CustomerSelectDialog'
-import { getTenantBySlug, getEmployeeId } from '@/lib/tenantUtils'
 import { completeSale } from '@/lib/services/salesService'
 import { printReceipt } from '@/lib/receiptUtils'
 import { Cart, CartItem, Sale, Payment, DiscountType } from '@/types'
@@ -28,9 +26,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 
 export default function SalesPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [employeeId, setEmployeeId] = useState<number>(0)
     const [searchQuery, setSearchQuery] = useState('')
     const [showSearchDialog, setShowSearchDialog] = useState(false)
@@ -55,20 +50,22 @@ export default function SalesPage() {
     } = useCartStore()
 
     useEffect(() => {
-        async function loadTenantAndEmployee() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-                const supabase = createClient()
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    const empId = await getEmployeeId(user.id, tenant.id)
-                    if (empId) setEmployeeId(empId)
+        async function loadEmployee() {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const { data: employee } = await supabase
+                    .from('employees')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single()
+                if (employee) {
+                    setEmployeeId(employee.id)
                 }
             }
         }
-        loadTenantAndEmployee()
-    }, [tenantSlug])
+        loadEmployee()
+    }, [])
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,11 +124,11 @@ export default function SalesPage() {
                 discount,
                 discount_type: discountType
             }
-            const sale = await completeSale(cart, tenantId, employeeId)
+            const sale = await completeSale(cart, employeeId)
             clearCart()
             setShowPaymentDialog(false)
             try {
-                await printReceipt(sale.id, tenantId)
+                await printReceipt(sale.id)
                 showToast('success', `Sale completed! Invoice #${sale.invoice_number}. Receipt downloaded.`)
             } catch {
                 showToast('success', `Sale completed! Invoice #${sale.invoice_number}`)
@@ -186,7 +183,6 @@ export default function SalesPage() {
                         if (!open) setSearchQuery('')
                     }}
                     onSelectItem={handleSelectItem}
-                    tenantId={tenantId}
                     initialQuery={searchQuery}
                 />
 
@@ -425,7 +421,6 @@ export default function SalesPage() {
                     open={showCustomerDialog}
                     onOpenChange={setShowCustomerDialog}
                     onSelectCustomer={handleSelectCustomer}
-                    tenantId={tenantId}
                 />
             </div>
         </div>

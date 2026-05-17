@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Award, Plus, Edit, Trash2, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,14 +15,10 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getCustomerTiers, deleteCustomerTier } from '@/lib/services/loyaltyService'
 import CustomerTierDialog from '@/components/features/loyalty/CustomerTierDialog'
 
 export default function LoyaltyPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [tiers, setTiers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [showTierDialog, setShowTierDialog] = useState(false)
@@ -31,25 +26,13 @@ export default function LoyaltyPage() {
     const { showToast } = useToast()
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadTiers()
-        }
-    }, [tenantId])
+        loadTiers()
+    }, [])
 
     const loadTiers = async () => {
         setLoading(true)
         try {
-            const data = await getCustomerTiers(tenantId)
+            const data = await getCustomerTiers()
             setTiers(data)
         } catch (error) {
             console.error('Error loading tiers:', error)
@@ -249,7 +232,6 @@ export default function LoyaltyPage() {
                 open={showTierDialog}
                 onOpenChange={setShowTierDialog}
                 tier={selectedTier}
-                tenantId={tenantId}
                 onSaved={handleTierSaved}
             />
         </div>

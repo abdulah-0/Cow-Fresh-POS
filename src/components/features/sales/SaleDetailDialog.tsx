@@ -12,20 +12,18 @@ interface SaleDetailDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     sale: any
-    tenantId: string
 }
 
 export default function SaleDetailDialog({
     open,
     onOpenChange,
     sale,
-    tenantId,
 }: SaleDetailDialogProps) {
     if (!sale) return null
 
     const handlePrintReceipt = async () => {
         try {
-            await printReceipt(sale.id, tenantId)
+            await printReceipt(sale.id)
         } catch (error) {
             console.error('Error printing receipt:', error)
         }

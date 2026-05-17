@@ -22,7 +22,7 @@ export interface EmployeeInput {
 /**
  * Create a new employee
  */
-export async function createEmployee(employee: EmployeeInput, tenantId: string): Promise<any> {
+export async function createEmployee(employee: EmployeeInput): Promise<any> {
     const supabase = createClient()
 
     try {
@@ -30,7 +30,6 @@ export async function createEmployee(employee: EmployeeInput, tenantId: string):
         const { data: person, error: personError } = await supabase
             .from('people')
             .insert({
-                tenant_id: tenantId,
                 first_name: employee.person.first_name,
                 last_name: employee.person.last_name,
                 email: employee.person.email,
@@ -52,7 +51,6 @@ export async function createEmployee(employee: EmployeeInput, tenantId: string):
         const { data: employeeRecord, error: employeeError } = await supabase
             .from('employees')
             .insert({
-                tenant_id: tenantId,
                 person_id: person.id,
                 username: employee.username,
                 password: employee.password, // Should be hashed in production
@@ -154,7 +152,6 @@ export async function deleteEmployee(employeeId: number): Promise<void> {
  * Get employees with filters
  */
 export async function getEmployees(
-    tenantId: string,
     filters?: {
         search?: string
         deleted?: boolean
@@ -170,7 +167,6 @@ export async function getEmployees(
                 person:people(*),
                 role:roles(name)
             `)
-            .eq('tenant_id', tenantId)
             .eq('deleted', filters?.deleted ?? false)
             .order('id', { ascending: false })
 

@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/client'
 
 export interface Expense {
     id: number
-    tenant_id: string
     expense_time: string
     category: string
     amount: number
@@ -12,12 +11,11 @@ export interface Expense {
     created_at: string
 }
 
-export async function getExpenses(tenantId: string, filters?: { dateFrom?: string, dateTo?: string }): Promise<Expense[]> {
+export async function getExpenses(filters?: { dateFrom?: string, dateTo?: string }): Promise<Expense[]> {
     const supabase = createClient()
     let query = supabase
         .from('expenses')
         .select('*')
-        .eq('tenant_id', tenantId)
         .order('expense_time', { ascending: false })
 
     if (filters?.dateFrom) {
@@ -44,12 +42,11 @@ export async function addExpense(expense: Partial<Expense>) {
     return data
 }
 
-export async function getExpenseCategories(tenantId: string): Promise<string[]> {
+export async function getExpenseCategories(): Promise<string[]> {
     const supabase = createClient()
     const { data, error } = await supabase
         .from('expenses')
         .select('category')
-        .eq('tenant_id', tenantId)
     
     if (error) throw error
     const categories = Array.from(new Set(data?.map(d => d.category) || []))

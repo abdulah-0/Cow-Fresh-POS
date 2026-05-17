@@ -21,8 +21,7 @@ export interface StockTransfer {
  * Adjust stock quantity (add or remove)
  */
 export async function adjustStock(
-    adjustment: StockAdjustment,
-    tenantId: string
+    adjustment: StockAdjustment
 ): Promise<void> {
     const supabase = createClient()
 
@@ -51,7 +50,6 @@ export async function adjustStock(
         const { error: transError } = await supabase
             .from('inventory_transactions')
             .insert({
-                tenant_id: tenantId,
                 item_id: adjustment.itemId,
                 user_id: adjustment.userId,
                 location_id: adjustment.locationId,
@@ -71,8 +69,7 @@ export async function adjustStock(
  * Transfer stock between locations
  */
 export async function transferStock(
-    transfer: StockTransfer,
-    tenantId: string
+    transfer: StockTransfer
 ): Promise<void> {
     const supabase = createClient()
 
@@ -123,7 +120,6 @@ export async function transferStock(
         // Create inventory transactions
         const transactions = [
             {
-                tenant_id: tenantId,
                 item_id: transfer.itemId,
                 user_id: transfer.userId,
                 location_id: transfer.fromLocationId,
@@ -132,7 +128,6 @@ export async function transferStock(
                 trans_date: new Date().toISOString(),
             },
             {
-                tenant_id: tenantId,
                 item_id: transfer.itemId,
                 user_id: transfer.userId,
                 location_id: transfer.toLocationId,
@@ -176,10 +171,9 @@ export async function getStockLevel(itemId: number, locationId: number): Promise
 }
 
 /**
- * Get all inventory transactions for a tenant
+ * Get all inventory transactions
  */
 export async function getAllInventoryTransactions(
-    tenantId: string,
     filters?: {
         itemId?: number
         locationId?: number
@@ -199,7 +193,6 @@ export async function getAllInventoryTransactions(
                 ),
                 location:stock_locations(location_name)
             `)
-            .eq('tenant_id', tenantId)
             .order('trans_date', { ascending: false })
 
         if (filters?.itemId) {
@@ -227,14 +220,13 @@ export async function getAllInventoryTransactions(
 /**
  * Get all stock locations
  */
-export async function getStockLocations(tenantId: string): Promise<any[]> {
+export async function getStockLocations(): Promise<any[]> {
     const supabase = createClient()
 
     try {
         const { data, error } = await supabase
             .from('stock_locations')
             .select('*')
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .order('location_name')
 
@@ -250,7 +242,6 @@ export async function getStockLocations(tenantId: string): Promise<any[]> {
  * Create stock location
  */
 export async function createStockLocation(
-    tenantId: string,
     locationName: string
 ): Promise<any> {
     const supabase = createClient()
@@ -259,7 +250,6 @@ export async function createStockLocation(
         const { data, error } = await supabase
             .from('stock_locations')
             .insert({
-                tenant_id: tenantId,
                 location_name: locationName,
                 deleted: false,
             })

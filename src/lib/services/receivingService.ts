@@ -26,7 +26,6 @@ export interface ReceivingItemInput {
  */
 export async function createReceiving(
     receiving: ReceivingInput,
-    tenantId: string,
     employeeId: number
 ): Promise<any> {
     const supabase = createClient()
@@ -36,7 +35,6 @@ export async function createReceiving(
         const { data: receivingRecord, error: receivingError } = await supabase
             .from('receivings')
             .insert({
-                tenant_id: tenantId,
                 supplier_id: receiving.supplier_id,
                 employee_id: employeeId,
                 comment: receiving.comment || '',
@@ -56,7 +54,6 @@ export async function createReceiving(
             
             // 1. Record the debt (Credit)
             await supabase.from('supplier_ledger_entries').insert({
-                tenant_id: tenantId,
                 supplier_id: receiving.supplier_id,
                 transaction_type: 'credit',
                 amount: totalAmount,
@@ -69,7 +66,6 @@ export async function createReceiving(
             // 2. If it was already paid (Cash/Card/Check), record the payment entry to clear balance
             if (receiving.payment_type && receiving.payment_type !== 'credit') {
                 await supabase.from('supplier_ledger_entries').insert({
-                    tenant_id: tenantId,
                     supplier_id: receiving.supplier_id,
                     transaction_type: 'payment',
                     amount: totalAmount,
@@ -130,7 +126,6 @@ export async function createReceiving(
 
             if (user) {
                 await supabase.from('inventory_transactions').insert({
-                    tenant_id: tenantId,
                     item_id: item.item_id,
                     user_id: user.id,
                     location_id: item.item_location,
@@ -165,7 +160,6 @@ export async function createReceiving(
  * Get receivings with filters
  */
 export async function getReceivings(
-    tenantId: string,
     filters?: {
         supplier_id?: number
         dateFrom?: Date
@@ -185,7 +179,6 @@ export async function getReceivings(
                 ),
                 receivings_items(*)
             `)
-            .eq('tenant_id', tenantId)
             .order('receiving_time', { ascending: false })
 
         if (filters?.supplier_id) {
@@ -244,7 +237,7 @@ export async function getReceivingById(receivingId: number): Promise<any> {
 /**
  * Get suppliers
  */
-export async function getSuppliers(tenantId: string): Promise<any[]> {
+export async function getSuppliers(): Promise<any[]> {
     const supabase = createClient()
 
     try {
@@ -254,7 +247,6 @@ export async function getSuppliers(tenantId: string): Promise<any[]> {
                 *,
                 person:people(*)
             `)
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .order('company_name')
 

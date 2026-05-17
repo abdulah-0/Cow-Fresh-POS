@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/client'
  * Get profit & loss statement
  */
 export async function getProfitAndLoss(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<{
@@ -22,7 +21,6 @@ export async function getProfitAndLoss(
         const { data: sales } = await supabase
             .from('sales')
             .select('sale_total')
-            .eq('tenant_id', tenantId)
             .gte('sale_time', startDate.toISOString())
             .lte('sale_time', endDate.toISOString())
 
@@ -34,9 +32,8 @@ export async function getProfitAndLoss(
             .select(`
                 quantity,
                 item:items(cost_price),
-                sale:sales!inner(tenant_id, sale_time)
+                sale:sales!inner(sale_time)
             `)
-            .eq('sale.tenant_id', tenantId)
             .gte('sale.sale_time', startDate.toISOString())
             .lte('sale.sale_time', endDate.toISOString())
 
@@ -74,7 +71,6 @@ export async function getProfitAndLoss(
  * Get revenue by period
  */
 export async function getRevenueByPeriod(
-    tenantId: string,
     startDate: Date,
     endDate: Date,
     groupBy: 'day' | 'week' | 'month' = 'day'
@@ -85,7 +81,6 @@ export async function getRevenueByPeriod(
         const { data: sales, error } = await supabase
             .from('sales')
             .select('sale_time, sale_total')
-            .eq('tenant_id', tenantId)
             .gte('sale_time', startDate.toISOString())
             .lte('sale_time', endDate.toISOString())
             .order('sale_time', { ascending: true })
@@ -127,7 +122,6 @@ export async function getRevenueByPeriod(
  * Get tax summary report
  */
 export async function getTaxSummary(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<{
@@ -142,7 +136,6 @@ export async function getTaxSummary(
         const { data: sales, error } = await supabase
             .from('sales')
             .select('sale_total, tax')
-            .eq('tenant_id', tenantId)
             .gte('sale_time', startDate.toISOString())
             .lte('sale_time', endDate.toISOString())
 
@@ -175,7 +168,6 @@ export async function getTaxSummary(
  * Get discount analysis
  */
 export async function getDiscountAnalysis(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<{
@@ -193,9 +185,8 @@ export async function getDiscountAnalysis(
                 quantity,
                 item_unit_price,
                 discount_percent,
-                sale:sales!inner(tenant_id, sale_time)
+                sale:sales!inner(sale_time)
             `)
-            .eq('sale.tenant_id', tenantId)
             .gte('sale.sale_time', startDate.toISOString())
             .lte('sale.sale_time', endDate.toISOString())
 
@@ -242,7 +233,6 @@ export async function getDiscountAnalysis(
  * Get payment reconciliation
  */
 export async function getPaymentReconciliation(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<Array<{
@@ -259,9 +249,8 @@ export async function getPaymentReconciliation(
             .select(`
                 payment_type,
                 payment_amount,
-                sale:sales!inner(tenant_id, sale_time, sale_total)
+                sale:sales!inner(sale_time, sale_total)
             `)
-            .eq('sale.tenant_id', tenantId)
             .gte('sale.sale_time', startDate.toISOString())
             .lte('sale.sale_time', endDate.toISOString())
 

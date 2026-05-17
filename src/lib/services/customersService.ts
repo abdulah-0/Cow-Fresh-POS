@@ -24,7 +24,7 @@ export interface CustomerInput {
 /**
  * Create a new customer
  */
-export async function createCustomer(customer: CustomerInput, tenantId: string): Promise<any> {
+export async function createCustomer(customer: CustomerInput): Promise<any> {
     const supabase = createClient()
 
     try {
@@ -32,7 +32,6 @@ export async function createCustomer(customer: CustomerInput, tenantId: string):
         const { data: person, error: personError } = await supabase
             .from('people')
             .insert({
-                tenant_id: tenantId,
                 first_name: customer.person.first_name,
                 last_name: customer.person.last_name,
                 email: customer.person.email,
@@ -54,7 +53,6 @@ export async function createCustomer(customer: CustomerInput, tenantId: string):
         const { data: customerRecord, error: customerError } = await supabase
             .from('customers')
             .insert({
-                tenant_id: tenantId,
                 person_id: person.id,
                 company_name: customer.company_name,
                 account_number: customer.account_number,
@@ -161,7 +159,6 @@ export async function deleteCustomer(customerId: number): Promise<void> {
  * Get customers with filters
  */
 export async function getCustomers(
-    tenantId: string,
     filters?: {
         search?: string
         taxable?: boolean
@@ -176,7 +173,6 @@ export async function getCustomers(
                 *,
                 person:people(*)
             `)
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .order('id', { ascending: false })
 

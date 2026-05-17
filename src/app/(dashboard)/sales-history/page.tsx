@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Download, FileText, Search, Eye, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,16 +15,12 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getSales } from '@/lib/services/salesService'
 import { exportSalesToCSV, exportSalesToPDF } from '@/lib/exportUtils'
 import { formatCurrency } from '@/lib/currency'
 import SaleDetailDialog from '@/components/features/sales/SaleDetailDialog'
 
 export default function SalesHistoryPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [sales, setSales] = useState<any[]>([])
     const [filteredSales, setFilteredSales] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
@@ -36,23 +31,10 @@ export default function SalesHistoryPage() {
     const [dateTo, setDateTo] = useState('')
     const { showToast } = useToast()
 
-    // Load tenant ID
-    useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
     // Load sales
     useEffect(() => {
-        if (tenantId) {
-            loadSales()
-        }
-    }, [tenantId])
+        loadSales()
+    }, [])
 
     // Filter sales
     useEffect(() => {
@@ -81,7 +63,7 @@ export default function SalesHistoryPage() {
     const loadSales = async () => {
         setLoading(true)
         try {
-            const data = await getSales(tenantId)
+            const data = await getSales()
             setSales(data)
             setFilteredSales(data)
         } catch (error) {
@@ -271,7 +253,6 @@ export default function SalesHistoryPage() {
                 open={showDetailDialog}
                 onOpenChange={setShowDetailDialog}
                 sale={selectedSale}
-                tenantId={tenantId}
             />
         </div>
     )

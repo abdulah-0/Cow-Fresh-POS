@@ -17,7 +17,6 @@ import { Upload, Download, CheckCircle2, XCircle, Loader2, FileSpreadsheet } fro
 interface BulkUploadDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    tenantId: string
     onUploaded: () => void
 }
 
@@ -93,7 +92,7 @@ function parseExcel(buffer: ArrayBuffer): ParsedRow[] {
     })
 }
 
-export default function BulkUploadDialog({ open, onOpenChange, tenantId, onUploaded }: BulkUploadDialogProps) {
+export default function BulkUploadDialog({ open, onOpenChange, onUploaded }: BulkUploadDialogProps) {
     const fileRef = useRef<HTMLInputElement>(null)
     const { showToast } = useToast()
 
@@ -122,10 +121,6 @@ export default function BulkUploadDialog({ open, onOpenChange, tenantId, onUploa
 
     const handleUpload = async () => {
         if (validRows.length === 0) return
-        if (!tenantId) {
-            showToast('error', 'Store information not loaded. Please refresh the page.')
-            return
-        }
 
         setUploading(true)
 
@@ -140,7 +135,6 @@ export default function BulkUploadDialog({ open, onOpenChange, tenantId, onUploa
             })
 
             const inserts = Array.from(uniqueByNumber.values()).map((row) => ({
-                tenant_id: tenantId,
                 name: row.name,
                 category: row.category || null,
                 item_number: row.item_number,
@@ -153,7 +147,7 @@ export default function BulkUploadDialog({ open, onOpenChange, tenantId, onUploa
                 deleted: false,
             }))
 
-            console.log('Bulk Uploading:', inserts.length, 'items for tenant:', tenantId)
+            console.log('Bulk Uploading:', inserts.length, 'items')
 
             // Use upsert on item_number to avoid unique constraint violations
             const { error } = await supabase

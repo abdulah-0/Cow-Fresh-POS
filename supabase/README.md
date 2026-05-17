@@ -1,7 +1,7 @@
 # Supabase Database Setup Instructions
 
 ## Overview
-This directory contains the SQL script to set up the complete database for the POS system.
+This directory contains the SQL script to set up the complete database schema for the dedicated, single-store POS system optimized for dairy shops.
 
 ## Setup Instructions
 
@@ -9,65 +9,62 @@ This directory contains the SQL script to set up the complete database for the P
 
 1. **Go to your Supabase project**
    - Visit [https://supabase.com](https://supabase.com)
-   - Select your project
+   - Select your project.
 
 2. **Open SQL Editor**
-   - Click on "SQL Editor" in the left sidebar
-   - Click "New Query"
+   - Click on "SQL Editor" in the left sidebar.
+   - Click "New Query".
 
 3. **Run the setup script**
-   - Copy the entire contents of `setup.sql`
-   - Paste into the SQL Editor
-   - Click "Run" or press `Ctrl+Enter`
+   - Copy the entire contents of `master.sql`.
+   - Paste it into the SQL Editor.
+   - Click "Run" or press `Ctrl+Enter`.
 
 4. **Verify setup**
-   - Check the "Table Editor" to see all tables created
-   - You should see 20+ tables
+   - Check the "Table Editor" to see all tables created.
+   - You should see 18 tables populated and configured.
 
 ### Option 2: Using Supabase CLI
 
 ```bash
-# Install Supabase CLI if not already installed
-npm install -g supabase
-
-# Login to Supabase
-supabase login
-
 # Link to your project
 supabase link --project-ref YOUR_PROJECT_REF
 
-# Run the migration
-supabase db push
+# Run the migration or seed the schema directly
+# (You can also apply master.sql directly to your linked database)
 ```
 
 ## What Gets Created
 
-### Tables (20+)
-- `tenants` - Multi-tenant support
-- `people` - Shared person data
-- `employees` - Employee records
-- `customers` - Customer records
-- `suppliers` - Supplier records
-- `items` - Inventory items
-- `sales` - Sales transactions
-- `inventory` - Stock levels
-- `roles` - RBAC roles
-- `customer_tiers` - Loyalty tiers
-- `loyalty_points` - Customer points
-- And more...
+### Tables (18)
+- `people` - Base table for storing personal profiles.
+- `employees` - Employee accounts linked to authorization and store roles.
+- `roles` - RBAC access control configuration (Admin, Manager, Cashier).
+- `customers` - Customer accounts for sales and loyalty tracking.
+- `customer_tiers` - Loyalty program status tier rewards.
+- `loyalty_points` - Current points balance for each customer.
+- `loyalty_transactions` - Ledger of loyalty points accumulation and redemptions.
+- `suppliers` - Product suppliers records.
+- `items` - Product items (supports bulk/weight units, batch numbers, and expiry tracking).
+- `stock_locations` - Warehouse and store locations.
+- `inventory` - Inventory level quantities at each stock location.
+- `inventory_transactions` - Detailed ledger of stock transactions (sales, receivings, wastage, adjustments).
+- `wastage` - Spoiled, damaged, or expired stock logging (essential for fresh dairy products).
+- `sales` - Completed sale transactions invoices.
+- `sales_items` - Product line items purchased in each sale.
+- `sales_payments` - Payment details for completed sales (Cash, Card, Wallet).
+- `receivings` - Stock receivings from suppliers.
+- `receivings_items` - Items received in each transaction.
 
-### Default Data
-- **Tenant**: Demo Store (slug: `demo`)
-- **Roles**: Admin, Manager, Cashier
+### Default Seeding Data
+- **Roles**: Admin (full system access), Manager (management access), Cashier (basic POS access)
 - **Customer Tiers**: Bronze, Silver, Gold, Platinum, Diamond
 - **Stock Location**: Main Store
 
-### Your Superadmin Account
-- **Email**: snakeyes358@gmail.com
-- **Username**: superadmin
-- **Password**: Useless19112004
+### Default Administrator Account
+- **Email**: `snakeyes358@gmail.com`
+- **Password**: `Useless19112004` (Enforced securely via pgcrypto encryption)
 - **Role**: Admin (full access)
-- **Tenant**: demo
 
 ## After Setup
 
@@ -78,54 +75,22 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-### 2. Enable Email Auth (Optional)
+### 2. Enable Email Auth
 If you want email/password authentication:
-1. Go to Authentication → Providers
-2. Enable Email provider
-3. Configure email templates
+1. Go to **Authentication** → **Providers** in Supabase Dashboard.
+2. Ensure the **Email** provider is enabled.
+3. Configure signup confirmation preferences as needed.
 
 ### 3. Test Login
-1. Go to your deployed app or run locally
-2. Navigate to `/login`
-3. Login with:
-   - Email: `snakeyes358@gmail.com`
-   - Password: `Useless19112004`
-4. You should be redirected to `/demo/dashboard`
-
-## Security Notes
-
-⚠️ **IMPORTANT**: 
-- The password in the script is encrypted using `crypt()` function
-- Change your password after first login
-- Never commit real passwords to version control
-- Enable Row Level Security (RLS) policies for production
+1. Start your local dev server: `npm run dev`.
+2. Go to your local page `http://localhost:3000`.
+3. Sign in with the administrator email `snakeyes358@gmail.com` and password `Useless19112004`.
+4. You will be successfully logged in and routed to `/dashboard`.
 
 ## Troubleshooting
 
 ### Error: "relation already exists"
-- This means tables already exist
-- Either drop existing tables or skip this error
-
-### Error: "permission denied"
-- Make sure you're running as database owner
-- Check your Supabase project permissions
+- This means tables already exist in your Supabase schema. If you want a clean state, drop the existing public schema tables first before running `master.sql`.
 
 ### Error: "function crypt does not exist"
-- Run: `CREATE EXTENSION IF NOT EXISTS pgcrypto;`
-- This enables password encryption
-
-## Next Steps
-
-1. ✅ Run the setup script
-2. ✅ Verify all tables created
-3. ✅ Test superadmin login
-4. ✅ Create additional employees
-5. ✅ Add your first items
-6. ✅ Start selling!
-
-## Support
-
-For issues or questions:
-- Check Supabase documentation: https://supabase.com/docs
-- Review the POS system README
-- Check the walkthrough.md in the artifacts directory
+- Run: `CREATE EXTENSION IF NOT EXISTS pgcrypto;` at the top of your SQL editor to enable cryptographic functions for password hashing.

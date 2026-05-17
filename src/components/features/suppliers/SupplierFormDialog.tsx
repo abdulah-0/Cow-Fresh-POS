@@ -20,7 +20,6 @@ interface SupplierFormDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     supplier?: any
-    tenantId: string
     onSaved: () => void
 }
 
@@ -28,7 +27,6 @@ export default function SupplierFormDialog({
     open,
     onOpenChange,
     supplier,
-    tenantId,
     onSaved,
 }: SupplierFormDialogProps) {
     const [loading, setLoading] = useState(false)
@@ -95,7 +93,7 @@ export default function SupplierFormDialog({
                 await updateSupplier(supplier.id, data)
                 showToast('success', 'Supplier updated successfully')
             } else {
-                await createSupplier(data, tenantId)
+                await createSupplier(data)
                 showToast('success', 'Supplier created successfully')
             }
             onSaved()

@@ -22,7 +22,7 @@ export interface SupplierInput {
 /**
  * Create a new supplier
  */
-export async function createSupplier(supplier: SupplierInput, tenantId: string): Promise<any> {
+export async function createSupplier(supplier: SupplierInput): Promise<any> {
     const supabase = createClient()
 
     try {
@@ -30,7 +30,6 @@ export async function createSupplier(supplier: SupplierInput, tenantId: string):
         const { data: person, error: personError } = await supabase
             .from('people')
             .insert({
-                tenant_id: tenantId,
                 first_name: supplier.person.first_name,
                 last_name: supplier.person.last_name,
                 email: supplier.person.email,
@@ -52,7 +51,6 @@ export async function createSupplier(supplier: SupplierInput, tenantId: string):
         const { data: supplierRecord, error: supplierError } = await supabase
             .from('suppliers')
             .insert({
-                tenant_id: tenantId,
                 person_id: person.id,
                 company_name: supplier.company_name,
                 account_number: supplier.account_number,
@@ -155,7 +153,6 @@ export async function deleteSupplier(supplierId: number): Promise<void> {
  * Get suppliers with filters
  */
 export async function getSuppliers(
-    tenantId: string,
     filters?: {
         search?: string
     }
@@ -169,7 +166,6 @@ export async function getSuppliers(
                 *,
                 person:people(*)
             `)
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .order('company_name')
 

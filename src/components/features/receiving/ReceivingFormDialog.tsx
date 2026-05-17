@@ -37,7 +37,6 @@ import { getStockLocations } from '@/lib/services/inventoryService'
 interface ReceivingFormDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    tenantId: string
     employeeId: number
     onSaved: () => void
 }
@@ -45,7 +44,6 @@ interface ReceivingFormDialogProps {
 export default function ReceivingFormDialog({
     open,
     onOpenChange,
-    tenantId,
     employeeId,
     onSaved,
 }: ReceivingFormDialogProps) {
@@ -74,17 +72,17 @@ export default function ReceivingFormDialog({
     const receivingItems = watch('items')
 
     useEffect(() => {
-        if (open && tenantId) {
+        if (open) {
             loadData()
         }
-    }, [open, tenantId])
+    }, [open])
 
     const loadData = async () => {
         try {
             const [suppliersData, itemsData, locationsData] = await Promise.all([
-                getSuppliers(tenantId),
-                getItems(tenantId),
-                getStockLocations(tenantId),
+                getSuppliers(),
+                getItems(),
+                getStockLocations(),
             ])
             setSuppliers(suppliersData)
             setItems(itemsData)
@@ -130,7 +128,7 @@ export default function ReceivingFormDialog({
 
         setLoading(true)
         try {
-            await createReceiving(data, tenantId, employeeId)
+            await createReceiving(data, employeeId)
             showToast('success', 'Receiving created successfully')
             reset()
             onSaved()

@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/client'
 
 export interface CustomerTier {
     id: number
-    tenant_id: string
     name: string
     min_points: number
     discount_percent: number
@@ -139,17 +138,16 @@ export async function redeemLoyaltyPoints(
 /**
  * Get customer tier based on points
  */
-export async function getCustomerTier(customerId: number, tenantId: string): Promise<CustomerTier | null> {
+export async function getCustomerTier(customerId: number): Promise<CustomerTier | null> {
     const supabase = createClient()
 
     try {
         const points = await getCustomerPoints(customerId)
 
-        // Get all tiers for tenant
+        // Get tiers
         const { data: tiers, error } = await supabase
             .from('customer_tiers')
             .select('*')
-            .eq('tenant_id', tenantId)
             .lte('min_points', points)
             .order('min_points', { ascending: false })
             .limit(1)
@@ -164,16 +162,15 @@ export async function getCustomerTier(customerId: number, tenantId: string): Pro
 }
 
 /**
- * Get all customer tiers for tenant
+ * Get all customer tiers
  */
-export async function getCustomerTiers(tenantId: string): Promise<CustomerTier[]> {
+export async function getCustomerTiers(): Promise<CustomerTier[]> {
     const supabase = createClient()
 
     try {
         const { data, error } = await supabase
             .from('customer_tiers')
             .select('*')
-            .eq('tenant_id', tenantId)
             .order('min_points', { ascending: true })
 
         if (error) throw error
@@ -189,7 +186,6 @@ export async function getCustomerTiers(tenantId: string): Promise<CustomerTier[]
  * Create customer tier
  */
 export async function createCustomerTier(
-    tenantId: string,
     name: string,
     minPoints: number,
     discountPercent: number,
@@ -201,7 +197,6 @@ export async function createCustomerTier(
         const { data, error } = await supabase
             .from('customer_tiers')
             .insert({
-                tenant_id: tenantId,
                 name: name,
                 min_points: minPoints,
                 discount_percent: discountPercent,

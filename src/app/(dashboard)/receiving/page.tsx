@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Package2, Plus, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,16 +15,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getTenantBySlug, getEmployeeId } from '@/lib/tenantUtils'
 import { getReceivings } from '@/lib/services/receivingService'
 import { getAllInventoryTransactions } from '@/lib/services/inventoryService'
 import { createClient } from '@/lib/supabase/client'
 import ReceivingFormDialog from '@/components/features/receiving/ReceivingFormDialog'
 
 export default function ReceivingPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [employeeId, setEmployeeId] = useState<number>(0)
     const [receivings, setReceivings] = useState<any[]>([])
     const [transactions, setTransactions] = useState<any[]>([])
@@ -34,34 +29,30 @@ export default function ReceivingPage() {
     const { showToast } = useToast()
 
     useEffect(() => {
-        async function loadTenantAndEmployee() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-
-                const supabase = createClient()
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    const empId = await getEmployeeId(user.id, tenant.id)
-                    if (empId) setEmployeeId(empId)
+        async function loadEmployee() {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const { data: employee } = await supabase
+                    .from('employees')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single()
+                if (employee) {
+                    setEmployeeId(employee.id)
                 }
             }
         }
-        loadTenantAndEmployee()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadData()
-        }
-    }, [tenantId])
+        loadEmployee()
+        loadData()
+    }, [])
 
     const loadData = async () => {
         setLoading(true)
         try {
             const [receivingsData, transactionsData] = await Promise.all([
-                getReceivings(tenantId),
-                getAllInventoryTransactions(tenantId)
+                getReceivings(),
+                getAllInventoryTransactions()
             ])
             setReceivings(receivingsData)
             setTransactions(transactionsData)
@@ -234,7 +225,6 @@ export default function ReceivingPage() {
             <ReceivingFormDialog
                 open={showReceivingDialog}
                 onOpenChange={setShowReceivingDialog}
-                tenantId={tenantId}
                 employeeId={employeeId}
                 onSaved={handleReceivingSaved}
             />

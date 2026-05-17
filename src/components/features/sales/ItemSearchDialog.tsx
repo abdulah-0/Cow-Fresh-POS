@@ -30,7 +30,6 @@ interface ItemSearchDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onSelectItem: (item: ItemWithStock) => void
-    tenantId: string
     initialQuery?: string
 }
 
@@ -38,7 +37,6 @@ export default function ItemSearchDialog({
     open,
     onOpenChange,
     onSelectItem,
-    tenantId,
     initialQuery = '',
 }: ItemSearchDialogProps) {
     const [searchQuery, setSearchQuery] = useState('')
@@ -57,7 +55,7 @@ export default function ItemSearchDialog({
     }, [open, initialQuery])
 
     const searchItems = useCallback(async (query: string) => {
-        if (!query.trim() || !tenantId) {
+        if (!query.trim()) {
             setItems([])
             return
         }
@@ -70,7 +68,6 @@ export default function ItemSearchDialog({
             const { data, error } = await supabase
                 .from('items')
                 .select('*')
-                .eq('tenant_id', tenantId)
                 .eq('deleted', false)
                 .or(`name.ilike.%${query}%,item_number.ilike.%${query}%,description.ilike.%${query}%`)
                 .limit(20)
@@ -114,7 +111,7 @@ export default function ItemSearchDialog({
         } finally {
             setLoading(false)
         }
-    }, [tenantId])
+    }, [])
 
     // Debounced search
     useEffect(() => {

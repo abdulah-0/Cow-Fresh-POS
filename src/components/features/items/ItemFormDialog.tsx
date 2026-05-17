@@ -29,7 +29,6 @@ interface ItemFormDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     item?: any
-    tenantId: string
     onSaved: () => void
 }
 
@@ -37,7 +36,6 @@ export default function ItemFormDialog({
     open,
     onOpenChange,
     item,
-    tenantId,
     onSaved,
 }: ItemFormDialogProps) {
     const [loading, setLoading] = useState(false)
@@ -74,11 +72,11 @@ export default function ItemFormDialog({
 
     // Load categories and locations
     useEffect(() => {
-        if (open && tenantId) {
+        if (open) {
             loadCategories()
             loadLocations()
         }
-    }, [open, tenantId])
+    }, [open])
 
     // Populate form when editing
     useEffect(() => {
@@ -111,7 +109,7 @@ export default function ItemFormDialog({
 
     const loadCategories = async () => {
         try {
-            const cats = await getCategories(tenantId)
+            const cats = await getCategories()
             setCategories(cats)
         } catch (error) {
             console.error('Error loading categories:', error)
@@ -120,7 +118,7 @@ export default function ItemFormDialog({
 
     const loadLocations = async () => {
         try {
-            const locs = await getStockLocations(tenantId)
+            const locs = await getStockLocations()
             setLocations(locs)
             if (locs.length > 0 && !selectedLocation) {
                 setSelectedLocation(locs[0].id)
@@ -148,7 +146,7 @@ export default function ItemFormDialog({
                 showToast('success', 'Item updated successfully')
             } else {
                 // Create new item with initial stock
-                await createItem(data, tenantId, initialStock, selectedLocation || undefined)
+                await createItem(data, initialStock, selectedLocation || undefined)
                 showToast('success', 'Item created successfully')
             }
             onSaved()

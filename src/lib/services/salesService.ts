@@ -8,14 +8,13 @@ import { ensureUniqueInvoiceNumber } from '@/lib/invoiceUtils'
  */
 export async function completeSale(
     cart: Cart,
-    tenantId: string,
     employeeId: number
 ): Promise<Sale> {
     const supabase = createClient()
 
     try {
         // Generate unique invoice number
-        const invoiceNumber = await ensureUniqueInvoiceNumber(tenantId)
+        const invoiceNumber = await ensureUniqueInvoiceNumber()
 
         // Calculate items subtotal
         const itemsSubtotal = cart.items.reduce((sum, item) => {
@@ -39,7 +38,6 @@ export async function completeSale(
         const { data: sale, error: saleError } = await supabase
             .from('sales')
             .insert({
-                tenant_id: tenantId,
                 customer_id: cart.customer?.id || null,
                 employee_id: employeeId,
                 comment: cart.comment || '',
@@ -92,7 +90,6 @@ export async function completeSale(
         if (cart.customer?.id) {
             // 1. Record the sale as a credit (amount customer owes)
             await supabase.from('customer_ledger_entries').insert({
-                tenant_id: tenantId,
                 customer_id: cart.customer.id,
                 transaction_type: 'credit',
                 amount: total,
@@ -106,7 +103,6 @@ export async function completeSale(
             for (const payment of cart.payments) {
                 if (payment.payment_amount > 0) {
                     await supabase.from('customer_ledger_entries').insert({
-                        tenant_id: tenantId,
                         customer_id: cart.customer.id,
                         transaction_type: 'payment',
                         amount: payment.payment_amount,
@@ -168,7 +164,6 @@ export async function completeSale(
  */
 export async function suspendSale(
     cart: Cart,
-    tenantId: string,
     employeeId: number
 ): Promise<number> {
     const supabase = createClient()
@@ -190,7 +185,6 @@ export async function suspendSale(
         const { data: sale, error: saleError } = await supabase
             .from('sales')
             .insert({
-                tenant_id: tenantId,
                 customer_id: cart.customer?.id || null,
                 employee_id: employeeId,
                 comment: cart.comment || 'SUSPENDED',
@@ -308,9 +302,9 @@ export async function voidSale(saleId: number): Promise<void> {
 }
 
 /**
- * Get all sales for a tenant
+ * Get all sales
  */
-export async function getSales(tenantId: string, filters?: {
+export async function getSales(filters?: {
     status?: string
     dateFrom?: string
     dateTo?: string
@@ -336,7 +330,6 @@ export async function getSales(tenantId: string, filters?: {
                     person:people(*)
                 )
             `)
-            .eq('tenant_id', tenantId)
             .order('sale_time', { ascending: false })
 
         // Apply filters

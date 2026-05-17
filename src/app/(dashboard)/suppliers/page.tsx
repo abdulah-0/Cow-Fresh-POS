@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Plus, Search, Edit, Trash2, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,14 +14,10 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getSuppliers, deleteSupplier } from '@/lib/services/suppliersService'
 import SupplierFormDialog from '@/components/features/suppliers/SupplierFormDialog'
 
 export default function SuppliersPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [suppliers, setSuppliers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -31,25 +26,13 @@ export default function SuppliersPage() {
     const { showToast } = useToast()
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadSuppliers()
-        }
-    }, [tenantId, searchQuery])
+        loadSuppliers()
+    }, [searchQuery])
 
     const loadSuppliers = async () => {
         setLoading(true)
         try {
-            const data = await getSuppliers(tenantId, {
+            const data = await getSuppliers({
                 search: searchQuery || undefined,
             })
             setSuppliers(data)
@@ -199,7 +182,6 @@ export default function SuppliersPage() {
                 open={showSupplierDialog}
                 onOpenChange={setShowSupplierDialog}
                 supplier={selectedSupplier}
-                tenantId={tenantId}
                 onSaved={handleSupplierSaved}
             />
         </div>

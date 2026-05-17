@@ -1,54 +1,21 @@
 // ============================================================================
-// TENANT & SUBSCRIPTION TYPES
+// CORE USER PROFILE & ROLE TYPES
 // ============================================================================
-
-export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'cancelled'
-export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise'
-export type TenantRole = 'owner' | 'admin' | 'manager' | 'cashier'
-
-export interface Tenant {
-    id: string
-    name: string
-    slug: string
-    subscription_status: SubscriptionStatus
-    subscription_plan: SubscriptionPlan
-    trial_ends_at?: string
-    subscription_ends_at?: string
-    created_at: string
-    updated_at: string
-}
 
 export interface Profile {
     id: string
     full_name?: string
     avatar_url?: string
-    current_tenant_id?: string
-    tenant?: Tenant
     created_at: string
     updated_at: string
-}
-
-export interface TenantUser {
-    id: string
-    tenant_id: string
-    user_id: string
-    role: TenantRole
-    invited_by?: string
-    invited_at?: string
-    joined_at?: string
-    created_at: string
-    updated_at: string
-    tenant?: Tenant
-    profile?: Profile
 }
 
 // ============================================================================
-// DATABASE TYPES (All include tenant_id)
+// DATABASE TYPES (Single-Store)
 // ============================================================================
 
 export interface Person {
     id: number
-    tenant_id: string
     first_name: string
     last_name: string
     gender?: number
@@ -67,7 +34,6 @@ export interface Person {
 
 export interface Employee {
     id: number
-    tenant_id: string
     person_id: number
     username: string
     deleted: boolean
@@ -78,7 +44,6 @@ export interface Employee {
 
 export interface Customer {
     id: number
-    tenant_id: string
     person_id: number
     company_name?: string
     account_number?: string
@@ -92,7 +57,6 @@ export interface Customer {
 
 export interface Supplier {
     id: number
-    tenant_id: string
     person_id: number
     company_name: string
     agency_name?: string
@@ -105,7 +69,6 @@ export interface Supplier {
 
 export interface Item {
     id: number
-    tenant_id: string
     name: string
     category: string
     supplier_id?: number
@@ -138,7 +101,6 @@ export interface Item {
 
 export interface StockLocation {
     id: number
-    tenant_id: string
     location_name: string
     deleted: boolean
 }
@@ -154,7 +116,6 @@ export type SaleStatus = 'completed' | 'suspended' | 'cancelled'
 
 export interface Sale {
     id: number
-    tenant_id: string
     sale_time: string
     customer_id?: number
     employee_id: number
@@ -196,7 +157,6 @@ export interface SalePayment {
 
 export interface Giftcard {
     id: number
-    tenant_id: string
     giftcard_number: number
     value: number
     person_id?: number
@@ -207,7 +167,6 @@ export interface Giftcard {
 
 export interface Receiving {
     id: number
-    tenant_id: string
     receiving_time: string
     supplier_id?: number
     employee_id: number
@@ -235,7 +194,6 @@ export interface ReceivingItem {
 
 export interface InventoryTransaction {
     id: number
-    tenant_id: string
     item_id: number
     user_id: string
     trans_date: string
@@ -247,7 +205,6 @@ export interface InventoryTransaction {
 
 export interface Wastage {
     id: number
-    tenant_id: string
     item_id: number
     quantity: number
     reason: string
@@ -297,7 +254,6 @@ export interface Payment {
 
 // App Config
 export interface AppConfig {
-    tenant_id: string
     key: string
     value: string
 }

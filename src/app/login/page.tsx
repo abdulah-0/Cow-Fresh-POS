@@ -44,63 +44,63 @@ export default function LoginPage() {
             {/* Left Panel - Branding */}
             <div
                 className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}
+                style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)' }}
             >
                 {/* Background shapes */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full opacity-20"
-                        style={{ background: 'radial-gradient(circle, #667eea, transparent)' }} />
+                        style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} />
                     <div className="absolute -bottom-40 -right-40 h-80 w-80 rounded-full opacity-20"
-                        style={{ background: 'radial-gradient(circle, #764ba2, transparent)' }} />
+                        style={{ background: 'radial-gradient(circle, #4f46e5, transparent)' }} />
                 </div>
-
+ 
                 {/* Logo */}
                 <div className="relative flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl"
-                        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                        style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' }}>
                         <Zap className="h-5 w-5 text-white" strokeWidth={2.5} />
                     </div>
-                    <span className="text-xl font-bold text-white">POS Cloud</span>
+                    <span className="text-xl font-bold text-white">Cow Fresh POS</span>
                 </div>
-
+ 
                 {/* Main text */}
                 <div className="relative space-y-6">
                     <h2 className="text-4xl font-bold text-white leading-tight">
-                        Your business,<br />
+                        Your dairy shop,<br />
                         <span style={{
-                            background: 'linear-gradient(135deg, #a78bfa, #818cf8)',
+                            background: 'linear-gradient(135deg, #a5b4fc, #818cf8)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                         }}>
-                            supercharged.
+                            fresh & streamlined.
                         </span>
                     </h2>
                     <div className="space-y-4">
                         {features.map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-3">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg"
-                                    style={{ background: 'rgba(102,126,234,0.2)' }}>
-                                    <Icon className="h-4 w-4 text-purple-300" />
+                                     style={{ background: 'rgba(99,102,241,0.2)' }}>
+                                    <Icon className="h-4 w-4 text-indigo-300" />
                                 </div>
-                                <span className="text-purple-100 text-sm font-medium">{text}</span>
+                                <span className="text-indigo-100 text-sm font-medium">{text}</span>
                             </div>
                         ))}
                     </div>
                 </div>
-
-                <p className="relative text-purple-400 text-xs">© 2025 POS Cloud. All rights reserved.</p>
+ 
+                <p className="relative text-indigo-400 text-xs">© 2026 Cow Fresh Dairy. All rights reserved.</p>
             </div>
-
+ 
             {/* Right Panel - Form */}
             <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-gray-50 p-8">
                 <div className="w-full max-w-md space-y-8">
                     {/* Mobile logo */}
                     <div className="flex lg:hidden items-center gap-2 justify-center">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl"
-                            style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                            style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' }}>
                             <Zap className="h-5 w-5 text-white" strokeWidth={2.5} />
                         </div>
-                        <span className="text-xl font-bold text-gray-900">POS Cloud</span>
+                        <span className="text-xl font-bold text-gray-900">Cow Fresh POS</span>
                     </div>
 
                     {/* Heading */}

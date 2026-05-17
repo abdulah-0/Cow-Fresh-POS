@@ -1,8 +1,9 @@
 -- =====================================================
--- COW FRESH POS - MASTER DATABASE SETUP
+-- COW FRESH POS - MASTER DATABASE SETUP (SINGLE STORE)
 -- =====================================================
 -- This script creates the entire database schema specialized for Dairy Shops.
--- Includes: Tenants, People, Roles, Employees, Customers, Suppliers, 
+-- Specialized for a dedicated single-store POS (Cow Fresh Dairy).
+-- Includes: People, Roles, Employees, Customers, Suppliers, 
 -- Items (with Expiry & Weight Units), Inventory, Sales, and Wastage.
 -- =====================================================
 
@@ -14,20 +15,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- 1. CORE SYSTEM TABLES
 -- =====================================================
 
--- Tenants (Businesses)
-CREATE TABLE IF NOT EXISTS tenants (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    settings JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- People (Shared base for all persons)
 CREATE TABLE IF NOT EXISTS people (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     email VARCHAR(255),
@@ -46,18 +36,15 @@ CREATE TABLE IF NOT EXISTS people (
 -- Roles & Permissions
 CREATE TABLE IF NOT EXISTS roles (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
     permissions TEXT[] DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(tenant_id, name)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Employees
 CREATE TABLE IF NOT EXISTS employees (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id),
     username VARCHAR(100) UNIQUE,
@@ -76,7 +63,6 @@ CREATE TABLE IF NOT EXISTS employees (
 -- Customers
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     company_name VARCHAR(255),
     account_number VARCHAR(100),
@@ -91,13 +77,11 @@ CREATE TABLE IF NOT EXISTS customers (
 -- Loyalty Program Tiers
 CREATE TABLE IF NOT EXISTS customer_tiers (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) UNIQUE NOT NULL,
     min_points INTEGER NOT NULL DEFAULT 0,
     discount_percent DECIMAL(5,2) DEFAULT 0,
     color VARCHAR(7) DEFAULT '#3B82F6',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(tenant_id, name)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Customer Loyalty Balances
@@ -126,7 +110,6 @@ CREATE TABLE IF NOT EXISTS loyalty_transactions (
 -- Suppliers
 CREATE TABLE IF NOT EXISTS suppliers (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     company_name VARCHAR(255),
     account_number VARCHAR(100),
@@ -138,7 +121,6 @@ CREATE TABLE IF NOT EXISTS suppliers (
 -- Items (Specialized for Dairy)
 CREATE TABLE IF NOT EXISTS items (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     item_number VARCHAR(100) UNIQUE NOT NULL,
     category VARCHAR(100),
@@ -159,11 +141,9 @@ CREATE TABLE IF NOT EXISTS items (
 -- Stock Locations
 CREATE TABLE IF NOT EXISTS stock_locations (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    location_name VARCHAR(255) NOT NULL,
+    location_name VARCHAR(255) UNIQUE NOT NULL,
     deleted BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(tenant_id, location_name)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Inventory Levels
@@ -193,7 +173,6 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
 -- Wastage Tracking (New for Dairy POS)
 CREATE TABLE IF NOT EXISTS wastage (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     quantity DECIMAL(10,3) NOT NULL,
     reason VARCHAR(255), -- 'expired', 'damaged', 'spilled'
@@ -209,7 +188,6 @@ CREATE TABLE IF NOT EXISTS wastage (
 -- Sales Transactions
 CREATE TABLE IF NOT EXISTS sales (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     sale_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     customer_id INTEGER REFERENCES customers(id),
     employee_id INTEGER REFERENCES employees(id),
@@ -252,7 +230,6 @@ CREATE TABLE IF NOT EXISTS sales_payments (
 -- Receivings
 CREATE TABLE IF NOT EXISTS receivings (
     id SERIAL PRIMARY KEY,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     receiving_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     supplier_id INTEGER REFERENCES suppliers(id),
     employee_id INTEGER REFERENCES employees(id),
@@ -281,48 +258,36 @@ CREATE TABLE IF NOT EXISTS receivings_items (
 -- 6. INDEXES
 -- =====================================================
 
-CREATE INDEX IF NOT EXISTS idx_people_tenant ON people(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_employees_tenant ON employees(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_suppliers_tenant ON suppliers(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_items_tenant ON items(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_items_expiry ON items(expiry_date);
-CREATE INDEX IF NOT EXISTS idx_sales_tenant ON sales(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_item ON inventory(item_id);
-CREATE INDEX IF NOT EXISTS idx_wastage_tenant ON wastage(tenant_id);
 
 -- =====================================================
 -- 7. DEFAULT DATA SEEDING
 -- =====================================================
 
--- Default tenant (Cow Fresh Dairy)
-INSERT INTO tenants (id, name, slug)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Cow Fresh Dairy', 'cow-fresh')
-ON CONFLICT (id) DO NOTHING;
-
 -- Default roles
-INSERT INTO roles (tenant_id, name, description, permissions) VALUES
-('00000000-0000-0000-0000-000000000001', 'Admin', 'Full system access',
+INSERT INTO roles (name, description, permissions) VALUES
+('Admin', 'Full system access',
  ARRAY['sales.view','sales.create','sales.edit','sales.delete','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.delete','inventory.adjust','customers.view','customers.create','customers.edit','customers.delete','employees.view','employees.create','employees.edit','employees.delete','reports.view','reports.export','settings.view','settings.edit','roles.manage']),
-('00000000-0000-0000-0000-000000000001', 'Manager', 'Management access',
+('Manager', 'Management access',
  ARRAY['sales.view','sales.create','sales.edit','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.adjust','customers.view','customers.create','customers.edit','employees.view','reports.view','reports.export']),
-('00000000-0000-0000-0000-000000000001', 'Cashier', 'Basic POS access',
+('Cashier', 'Basic POS access',
  ARRAY['sales.view','sales.create','inventory.view','customers.view','customers.create','reports.view'])
-ON CONFLICT (tenant_id, name) DO NOTHING;
+ON CONFLICT (name) DO NOTHING;
 
 -- Customer tiers
-INSERT INTO customer_tiers (tenant_id, name, min_points, discount_percent, color) VALUES
-('00000000-0000-0000-0000-000000000001', 'Bronze', 0, 2, '#CD7F32'),
-('00000000-0000-0000-0000-000000000001', 'Silver', 500, 5, '#C0C0C0'),
-('00000000-0000-0000-0000-000000000001', 'Gold', 1000, 10, '#FFD700'),
-('00000000-0000-0000-0000-000000000001', 'Platinum', 2500, 15, '#E5E4E2'),
-('00000000-0000-0000-0000-000000000001', 'Diamond', 5000, 20, '#B9F2FF')
-ON CONFLICT (tenant_id, name) DO NOTHING;
+INSERT INTO customer_tiers (name, min_points, discount_percent, color) VALUES
+('Bronze', 0, 2, '#CD7F32'),
+('Silver', 500, 5, '#C0C0C0'),
+('Gold', 1000, 10, '#FFD700'),
+('Platinum', 2500, 15, '#E5E4E2'),
+('Diamond', 5000, 20, '#B9F2FF')
+ON CONFLICT (name) DO NOTHING;
 
 -- Default stock location
-INSERT INTO stock_locations (tenant_id, location_name)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Main Store')
-ON CONFLICT (tenant_id, location_name) DO NOTHING;
+INSERT INTO stock_locations (location_name)
+VALUES ('Main Store')
+ON CONFLICT (location_name) DO NOTHING;
 
 -- =====================================================
 -- SUCCESS NOTIFICATION
@@ -335,10 +300,10 @@ BEGIN
     RAISE NOTICE '✅ COW FRESH POS DATABASE SETUP COMPLETE!';
     RAISE NOTICE '========================================';
     RAISE NOTICE '';
-    RAISE NOTICE '✅ Specialized for Dairy workflows';
+    RAISE NOTICE '✅ Specialized for Dairy workflows (Single Store)';
     RAISE NOTICE '✅ Weight-based pricing support enabled';
     RAISE NOTICE '✅ Expiry & Wastage tracking enabled';
-    RAISE NOTICE '✅ Roles, Tiers, and Demo Tenant created';
+    RAISE NOTICE '✅ Roles and Loyalty Tiers created';
     RAISE NOTICE '';
     RAISE NOTICE '🎉 Your Cow Fresh POS is ready for operation!';
     RAISE NOTICE '========================================';

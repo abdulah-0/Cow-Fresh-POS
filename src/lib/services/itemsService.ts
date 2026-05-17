@@ -40,14 +40,13 @@ export interface ItemFilters {
  * Generate unique item number
  * Format: ITEM-XXXXXX (6 digits)
  */
-export async function generateItemNumber(tenantId: string): Promise<string> {
+export async function generateItemNumber(): Promise<string> {
     const supabase = createClient()
 
-    // Get count of items for this tenant
+    // Get count of items
     const { count } = await supabase
         .from('items')
         .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', tenantId)
 
     const itemCount = (count || 0) + 1
     const itemNumber = `ITEM-${itemCount.toString().padStart(6, '0')}`
@@ -73,7 +72,6 @@ export async function generateItemNumber(tenantId: string): Promise<string> {
  */
 export async function createItem(
     item: ItemInput,
-    tenantId: string,
     initialStock?: number,
     locationId?: number
 ): Promise<any> {
@@ -81,12 +79,11 @@ export async function createItem(
 
     try {
         // Generate item number if not provided
-        const itemNumber = item.item_number || await generateItemNumber(tenantId)
+        const itemNumber = item.item_number || await generateItemNumber()
 
         const { data, error } = await supabase
             .from('items')
             .insert({
-                tenant_id: tenantId,
                 name: item.name,
                 item_number: itemNumber,
                 description: item.description,
@@ -207,14 +204,13 @@ export async function deleteItem(itemId: number): Promise<void> {
 /**
  * Get items with filters
  */
-export async function getItems(tenantId: string, filters?: ItemFilters): Promise<any> {
+export async function getItems(filters?: ItemFilters): Promise<any> {
     const supabase = createClient()
 
     try {
         let query = supabase
             .from('items')
             .select('*', { count: filters?.paginated ? 'exact' : undefined })
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .order('name')
 
@@ -345,14 +341,14 @@ export async function getItemById(itemId: number): Promise<any> {
 /**
  * Get low stock items
  */
-export async function getLowStockItems(tenantId: string): Promise<any[]> {
-    return getItems(tenantId, { low_stock: true })
+export async function getLowStockItems(): Promise<any[]> {
+    return getItems({ low_stock: true })
 }
 
 /**
  * Get items nearing expiry
  */
-export async function getExpiringItems(tenantId: string, days: number = 7): Promise<any[]> {
+export async function getExpiringItems(days: number = 7): Promise<any[]> {
     const supabase = createClient()
     const expiryThreshold = new Date()
     expiryThreshold.setDate(expiryThreshold.getDate() + days)
@@ -361,7 +357,6 @@ export async function getExpiringItems(tenantId: string, days: number = 7): Prom
         const { data, error } = await supabase
             .from('items')
             .select('*')
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .lte('expiry_date', expiryThreshold.toISOString())
             .gte('expiry_date', new Date().toISOString())
@@ -378,14 +373,13 @@ export async function getExpiringItems(tenantId: string, days: number = 7): Prom
 /**
  * Get unique categories
  */
-export async function getCategories(tenantId: string): Promise<string[]> {
+export async function getCategories(): Promise<string[]> {
     const supabase = createClient()
 
     try {
         const { data, error } = await supabase
             .from('items')
             .select('category')
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .not('category', 'is', null)
 

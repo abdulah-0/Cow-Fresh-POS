@@ -26,7 +26,6 @@ import {
 import type { RoleName } from '@/lib/roleUtils'
 
 interface SidebarProps {
-    tenantSlug?: string
     roleName?: RoleName
 }
 

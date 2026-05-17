@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Plus, Search, Edit, Trash2, Users, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,15 +15,11 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getCustomers, deleteCustomer } from '@/lib/services/customersService'
 import CustomerFormDialog from '@/components/features/customers/CustomerFormDialog'
 import CustomerHistoryDialog from '@/components/features/customers/CustomerHistoryDialog'
 
 export default function CustomersPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [customers, setCustomers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -34,25 +29,13 @@ export default function CustomersPage() {
     const { showToast } = useToast()
 
     useEffect(() => {
-        async function loadTenant() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-            }
-        }
-        loadTenant()
-    }, [tenantSlug])
-
-    useEffect(() => {
-        if (tenantId) {
-            loadCustomers()
-        }
-    }, [tenantId, searchQuery])
+        loadCustomers()
+    }, [searchQuery])
 
     const loadCustomers = async () => {
         setLoading(true)
         try {
-            const data = await getCustomers(tenantId, {
+            const data = await getCustomers({
                 search: searchQuery || undefined,
             })
             setCustomers(data)
@@ -225,7 +208,6 @@ export default function CustomersPage() {
                 open={showCustomerDialog}
                 onOpenChange={setShowCustomerDialog}
                 customer={selectedCustomer}
-                tenantId={tenantId}
                 onSaved={handleCustomerSaved}
             />
 

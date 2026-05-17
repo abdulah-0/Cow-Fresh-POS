@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/client'
 
 export interface LedgerEntry {
     id: number
-    tenant_id: string
     supplier_id?: number
     customer_id?: number
     transaction_time: string
@@ -25,12 +24,11 @@ export interface LedgerSummary {
  * Supplier Ledger Services
  */
 
-export async function getSupplierLedger(tenantId: string, supplierId: number): Promise<LedgerEntry[]> {
+export async function getSupplierLedger(supplierId: number): Promise<LedgerEntry[]> {
     const supabase = createClient()
     const { data, error } = await supabase
         .from('supplier_ledger_entries')
         .select('*')
-        .eq('tenant_id', tenantId)
         .eq('supplier_id', supplierId)
         .order('transaction_time', { ascending: true })
 
@@ -70,12 +68,11 @@ export function calculateLedgerSummary(entries: LedgerEntry[]): LedgerSummary {
  * Customer Ledger Services
  */
 
-export async function getCustomerLedger(tenantId: string, customerId: number): Promise<LedgerEntry[]> {
+export async function getCustomerLedger(customerId: number): Promise<LedgerEntry[]> {
     const supabase = createClient()
     const { data, error } = await supabase
         .from('customer_ledger_entries')
         .select('*')
-        .eq('tenant_id', tenantId)
         .eq('customer_id', customerId)
         .order('transaction_time', { ascending: true })
 

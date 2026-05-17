@@ -21,7 +21,6 @@ interface CustomerFormDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     customer?: any
-    tenantId: string
     onSaved: () => void
 }
 
@@ -29,7 +28,6 @@ export default function CustomerFormDialog({
     open,
     onOpenChange,
     customer,
-    tenantId,
     onSaved,
 }: CustomerFormDialogProps) {
     const [loading, setLoading] = useState(false)
@@ -96,7 +94,7 @@ export default function CustomerFormDialog({
                 await updateCustomer(customer.id, data)
                 showToast('success', 'Customer updated successfully')
             } else {
-                await createCustomer(data, tenantId)
+                await createCustomer(data)
                 showToast('success', 'Customer created successfully')
             }
             onSaved()

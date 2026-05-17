@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 /**
  * Get inventory valuation report
  */
-export async function getInventoryValuation(tenantId: string): Promise<{
+export async function getInventoryValuation(): Promise<{
     totalValue: number
     itemCount: number
     items: Array<{ itemName: string; quantity: number; value: number }>
@@ -17,7 +17,6 @@ export async function getInventoryValuation(tenantId: string): Promise<{
                 quantity,
                 item:items(name, cost_price)
             `)
-            .eq('item.tenant_id', tenantId)
 
         if (error) throw error
 
@@ -47,7 +46,6 @@ export async function getInventoryValuation(tenantId: string): Promise<{
  * Get stock movement report
  */
 export async function getStockMovementReport(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<Array<{
@@ -67,7 +65,6 @@ export async function getStockMovementReport(
                 item:items(name),
                 location:stock_locations(location_name)
             `)
-            .eq('item.tenant_id', tenantId)
             .gte('created_at', startDate.toISOString())
             .lte('created_at', endDate.toISOString())
             .order('created_at', { ascending: false })
@@ -91,7 +88,6 @@ export async function getStockMovementReport(
  * Get inventory turnover
  */
 export async function getInventoryTurnover(
-    tenantId: string,
     startDate: Date,
     endDate: Date
 ): Promise<Array<{
@@ -110,9 +106,8 @@ export async function getInventoryTurnover(
                 item_id,
                 quantity,
                 item:items(name),
-                sale:sales!inner(tenant_id, sale_time)
+                sale:sales!inner(sale_time)
             `)
-            .eq('sale.tenant_id', tenantId)
             .gte('sale.sale_time', startDate.toISOString())
             .lte('sale.sale_time', endDate.toISOString())
 
@@ -126,7 +121,6 @@ export async function getInventoryTurnover(
                 quantity,
                 item:items(name)
             `)
-            .eq('item.tenant_id', tenantId)
 
         if (invError) throw invError
 
@@ -164,7 +158,6 @@ export async function getInventoryTurnover(
  * Get dead stock analysis
  */
 export async function getDeadStockAnalysis(
-    tenantId: string,
     daysSinceLastSale: number = 90
 ): Promise<Array<{
     itemName: string
@@ -185,7 +178,6 @@ export async function getDeadStockAnalysis(
                 quantity,
                 item:items(name)
             `)
-            .eq('item.tenant_id', tenantId)
             .gt('quantity', 0)
 
         if (error) throw error
@@ -228,9 +220,7 @@ export async function getDeadStockAnalysis(
 /**
  * Get reorder suggestions
  */
-export async function getReorderSuggestions(
-    tenantId: string
-): Promise<Array<{
+export async function getReorderSuggestions(): Promise<Array<{
     itemName: string
     currentStock: number
     reorderLevel: number
@@ -245,7 +235,6 @@ export async function getReorderSuggestions(
                 *,
                 inventory(quantity)
             `)
-            .eq('tenant_id', tenantId)
             .eq('deleted', false)
 
         if (error) throw error

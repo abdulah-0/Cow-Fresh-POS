@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { 
     Wallet, 
     Plus, 
@@ -37,13 +36,9 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { getExpenses, addExpense, getExpenseCategories, Expense } from '@/lib/services/expenseService'
 
 export default function ExpensesPage() {
-    const params = useParams()
-    const tenantSlug = "cow-fresh"
-    const [tenantId, setTenantId] = useState<string>('')
     const [expenses, setExpenses] = useState<Expense[]>([])
     const [categories, setCategories] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
@@ -60,24 +55,20 @@ export default function ExpensesPage() {
 
     useEffect(() => {
         async function loadInitialData() {
-            const tenant = await getTenantBySlug(tenantSlug)
-            if (tenant) {
-                setTenantId(tenant.id)
-                const [expenseData, categoryData] = await Promise.all([
-                    getExpenses(tenant.id),
-                    getExpenseCategories(tenant.id)
-                ])
-                setExpenses(expenseData)
-                setCategories(categoryData)
-            }
+            const [expenseData, categoryData] = await Promise.all([
+                getExpenses(),
+                getExpenseCategories()
+            ])
+            setExpenses(expenseData)
+            setCategories(categoryData)
         }
         loadInitialData()
-    }, [tenantSlug])
+    }, [])
 
     const loadExpenses = async () => {
         setLoading(true)
         try {
-            const data = await getExpenses(tenantId)
+            const data = await getExpenses()
             setExpenses(data)
         } catch (error) {
             console.error('Error loading expenses:', error)
@@ -93,7 +84,6 @@ export default function ExpensesPage() {
         setLoading(true)
         try {
             await addExpense({
-                tenant_id: tenantId,
                 category: newExpense.category,
                 amount: parseFloat(newExpense.amount),
                 description: newExpense.description,
@@ -111,7 +101,7 @@ export default function ExpensesPage() {
             })
             loadExpenses()
             // Refresh categories in case a new one was added
-            const updatedCats = await getExpenseCategories(tenantId)
+            const updatedCats = await getExpenseCategories()
             setCategories(updatedCats)
         } catch (error) {
             console.error('Error adding expense:', error)

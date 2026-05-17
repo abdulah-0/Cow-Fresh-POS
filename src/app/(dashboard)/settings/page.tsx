@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { getTenantBySlug } from '@/lib/tenantUtils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,68 +19,52 @@ import {
 import ClientRoleGuard from '@/components/providers/ClientRoleGuard'
 
 export default function SettingsPage() {
-    const params = useParams()
-    const tenantSlug = params?.tenant as string
     const { showToast } = useToast()
 
     const [loading, setLoading] = useState(false)
-    const [tenantId, setTenantId] = useState('')
 
-    const [storeName, setStoreName] = useState('')
-    const [storeEmail, setStoreEmail] = useState('')
-    const [storePhone, setStorePhone] = useState('')
-    const [storeAddress, setStoreAddress] = useState('')
+    const [storeName, setStoreName] = useState('Cow Fresh Dairy')
+    const [storeEmail, setStoreEmail] = useState('info@cowfresh.com')
+    const [storePhone, setStorePhone] = useState('+92 300 1234567')
+    const [storeAddress, setStoreAddress] = useState('Cow Fresh Farm, Lahore')
     const [currency, setCurrency] = useState('PKR')
     const [taxRate, setTaxRate] = useState('0')
-    const [receiptFooter, setReceiptFooter] = useState('')
+    const [receiptFooter, setReceiptFooter] = useState('Thank you for your purchase!')
     const [timezone, setTimezone] = useState('Asia/Karachi')
 
     useEffect(() => {
-        async function loadTenant() {
-            const supabase = createClient()
-            const { data: tenant } = await supabase
-                .from('tenants')
-                .select('*')
-                .eq('slug', tenantSlug)
-                .single()
-
-            if (tenant) {
-                setTenantId(tenant.id)
-                setStoreName(tenant.name || '')
-                const s = (tenant.settings as Record<string, unknown>) || {}
-                setStoreEmail((s.email as string) || '')
-                setStorePhone((s.phone as string) || '')
-                setStoreAddress((s.address as string) || '')
-                setCurrency((s.currency as string) || 'PKR')
+        const savedSettings = localStorage.getItem('cow_fresh_settings')
+        if (savedSettings) {
+            try {
+                const s = JSON.parse(savedSettings)
+                setStoreName(s.name || 'Cow Fresh Dairy')
+                setStoreEmail(s.email || '')
+                setStorePhone(s.phone || '')
+                setStoreAddress(s.address || '')
+                setCurrency(s.currency || 'PKR')
                 setTaxRate(String(s.tax_rate ?? '0'))
-                setReceiptFooter((s.receipt_footer as string) || '')
-                setTimezone((s.timezone as string) || 'Asia/Karachi')
+                setReceiptFooter(s.receipt_footer || '')
+                setTimezone(s.timezone || 'Asia/Karachi')
+            } catch (e) {
+                console.error('Error parsing settings:', e)
             }
         }
-        if (tenantSlug) loadTenant()
-    }, [tenantSlug])
+    }, [])
 
     const handleSave = async () => {
         setLoading(true)
         try {
-            const supabase = createClient()
-            const { error } = await supabase
-                .from('tenants')
-                .update({
-                    name: storeName,
-                    settings: {
-                        email: storeEmail,
-                        phone: storePhone,
-                        address: storeAddress,
-                        currency,
-                        tax_rate: parseFloat(taxRate) || 0,
-                        receipt_footer: receiptFooter,
-                        timezone,
-                    },
-                })
-                .eq('id', tenantId)
-
-            if (error) throw error
+            const s = {
+                name: storeName,
+                email: storeEmail,
+                phone: storePhone,
+                address: storeAddress,
+                currency,
+                tax_rate: parseFloat(taxRate) || 0,
+                receipt_footer: receiptFooter,
+                timezone,
+            }
+            localStorage.setItem('cow_fresh_settings', JSON.stringify(s))
             showToast('success', 'Settings saved successfully.')
         } catch (err) {
             console.error(err)

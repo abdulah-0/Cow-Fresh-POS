@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { LogOut, Settings, Building2, ShoppingCart, ChevronRight } from 'lucide-react'
-import { Tenant } from '@/types'
 
 interface HeaderProps {
     user?: {
@@ -22,7 +21,6 @@ interface HeaderProps {
             full_name?: string
         }
     }
-    tenant?: Tenant
 }
 
 const routeLabels: Record<string, string> = {
@@ -39,7 +37,7 @@ const routeLabels: Record<string, string> = {
     reports: 'Reports',
 }
 
-export function Header({ user, tenant }: HeaderProps) {
+export function Header({ user }: HeaderProps) {
     const router = useRouter()
     const pathname = usePathname()
     const supabase = createClient()
@@ -67,18 +65,14 @@ export function Header({ user, tenant }: HeaderProps) {
         <header className="flex h-16 items-center justify-between border-b bg-white px-6 shadow-sm">
             {/* Left: Breadcrumb */}
             <div className="flex items-center gap-2 text-sm">
-                {tenant && (
+                <div className="flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-gray-400" />
+                    <span className="font-semibold text-gray-900">Cow Fresh Dairy</span>
+                </div>
+                {pageLabel && (
                     <>
-                        <div className="flex items-center gap-1.5">
-                            <Building2 className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium text-gray-900">{tenant.name}</span>
-                        </div>
-                        {pageLabel && (
-                            <>
-                                <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
-                                <span className="text-gray-500 font-medium">{pageLabel}</span>
-                            </>
-                        )}
+                        <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+                        <span className="text-gray-500 font-medium">{pageLabel}</span>
                     </>
                 )}
             </div>
