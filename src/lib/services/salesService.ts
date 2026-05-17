@@ -29,10 +29,9 @@ export async function completeSale(
         const globalDiscountAmount = cart.discount_type === 'percent'
             ? itemsSubtotal * (cart.discount / 100)
             : cart.discount
-        
         const subtotal = Math.max(0, itemsSubtotal - globalDiscountAmount)
-        const tax = subtotal * 0.10
-        const total = subtotal + tax
+        const tax = 0
+        const total = subtotal
 
         // Create sale record
         const { data: sale, error: saleError } = await supabase
@@ -178,8 +177,8 @@ export async function suspendSale(
             return sum + (itemTotal - discount)
         }, 0)
 
-        const tax = subtotal * 0.10
-        const total = subtotal + tax
+        const tax = 0
+        const total = subtotal
 
         // Create sale record with suspended status
         const { data: sale, error: saleError } = await supabase
