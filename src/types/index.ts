@@ -141,6 +141,7 @@ export interface SaleItem {
     serialnumber?: string
     line: number
     quantity_purchased: number
+    quantity?: number
     item_cost_price: number
     item_unit_price: number
     discount_percent: number
