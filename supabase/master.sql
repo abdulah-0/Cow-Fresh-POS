@@ -350,16 +350,12 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 -- Seed default app_config
 INSERT INTO app_config (key, value)
-SELECT 'company_name', 'Cow Fresh Dairy' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_name');
-
-INSERT INTO app_config (key, value)
-SELECT 'company_address', '123 Dairy Farm Lane, Milk City' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_address');
-
-INSERT INTO app_config (key, value)
-SELECT 'company_phone', '+92 300 1234567' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_phone');
-
-INSERT INTO app_config (key, value)
-SELECT 'company_email', 'info@cowfreshdairy.com' WHERE NOT EXISTS (SELECT 1 FROM app_config WHERE key = 'company_email');
+VALUES 
+    ('company_name', 'Cow Fresh Dairy'),
+    ('company_address', 'Cow Fresh Dairy Plaza # 86 E-1 Commercial Phase 8 Bahria Town Rawalpindi'),
+    ('company_phone', '0331 0377703'),
+    ('company_email', 'cowfreshdairy@gmail.com')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- =====================================================
 -- SUCCESS NOTIFICATION

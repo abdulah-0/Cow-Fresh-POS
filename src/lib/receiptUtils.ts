@@ -62,6 +62,21 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo, logoUr
     const totalPaid = sale.payments?.reduce((sum, p) => sum + p.payment_amount, 0) || 0
     const change = totalPaid - total
 
+    // Clean formatting and labeling for company details
+    const displayAddress = companyInfo.address 
+        ? (companyInfo.address.toLowerCase().startsWith('address:') ? companyInfo.address : `Address: ${companyInfo.address}`)
+        : '';
+
+    const displayPhone = companyInfo.phone
+        ? (companyInfo.phone.toLowerCase().startsWith('number:') || companyInfo.phone.toLowerCase().startsWith('tel:') 
+            ? companyInfo.phone 
+            : `Number: ${companyInfo.phone}`)
+        : '';
+
+    const displayEmail = companyInfo.email
+        ? (companyInfo.email.toLowerCase().startsWith('email:') ? companyInfo.email : `Email: ${companyInfo.email}`)
+        : '';
+
     return `
         <!DOCTYPE html>
         <html>
@@ -177,9 +192,9 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo, logoUr
                 ` : ''}
                 <div class="company-name">${companyInfo.name}</div>
                 <div class="company-info">
-                    ${companyInfo.address ? `${companyInfo.address}<br>` : ''}
-                    ${companyInfo.phone ? `Tel: ${companyInfo.phone}<br>` : ''}
-                    ${companyInfo.email ? `Email: ${companyInfo.email}<br>` : ''}
+                    ${displayAddress ? `${displayAddress}<br>` : ''}
+                    ${displayPhone ? `${displayPhone}<br>` : ''}
+                    ${displayEmail ? `${displayEmail}<br>` : ''}
                     ${companyInfo.taxId ? `Tax ID: ${companyInfo.taxId}` : ''}
                 </div>
             </div>
