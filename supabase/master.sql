@@ -3,8 +3,9 @@
 -- =====================================================
 -- This script creates the entire database schema specialized for Dairy Shops.
 -- Specialized for a dedicated single-store POS (Cow Fresh Dairy).
--- Includes: People, Roles, Employees, Customers, Suppliers, 
--- Items (with Expiry & Weight Units), Inventory, Sales, and Wastage.
+-- Includes: People, Roles, Employees, Customers, Suppliers,
+-- Items (with Expiry & Weight Units), Inventory, Sales, Zones, Riders,
+-- Deliveries, Routing, Dispatches, Invoices, and Milk Inventory.
 -- =====================================================
 
 -- Enable extensions
@@ -12,8 +13,17 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =====================================================
--- 0. CLEAN UP OLD SCHEMAS (Ensures single-store schema matches perfectly)
+-- 0. CLEAN UP OLD SCHEMAS (Ensures schema matches perfectly — safe to re-run)
 -- =====================================================
+
+-- Milestone 2 tables (drop first as they depend on base tables)
+DROP TABLE IF EXISTS milk_inventory CASCADE;
+DROP TABLE IF EXISTS rider_dispatch CASCADE;
+DROP TABLE IF EXISTS invoices CASCADE;
+DROP TABLE IF EXISTS deliveries CASCADE;
+DROP TABLE IF EXISTS delivery_routes CASCADE;
+
+-- Core tables
 DROP TABLE IF EXISTS sales_payments CASCADE;
 DROP TABLE IF EXISTS sales_items CASCADE;
 DROP TABLE IF EXISTS sales CASCADE;
@@ -29,6 +39,7 @@ DROP TABLE IF EXISTS loyalty_transactions CASCADE;
 DROP TABLE IF EXISTS loyalty_points CASCADE;
 DROP TABLE IF EXISTS customer_tiers CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS zones CASCADE;
 DROP TABLE IF EXISTS employees CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 DROP TABLE IF EXISTS people CASCADE;
@@ -81,10 +92,25 @@ CREATE TABLE IF NOT EXISTS employees (
 );
 
 -- =====================================================
--- 2. CUSTOMERS & LOYALTY
+-- 2. DELIVERY ZONES
 -- =====================================================
 
--- Customers
+-- Delivery Zones (Groups customers into geographic delivery areas)
+CREATE TABLE IF NOT EXISTS zones (
+    id SERIAL PRIMARY KEY,
+    zone_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    assigned_rider_id INTEGER, -- FK to employees, set later after employees table exists
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 3. CUSTOMERS & LOYALTY
+-- =====================================================
+
+-- Customers (includes delivery zone and geo-coordinate fields)
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
     person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
@@ -93,6 +119,10 @@ CREATE TABLE IF NOT EXISTS customers (
     taxable BOOLEAN DEFAULT TRUE,
     tax_id VARCHAR(100),
     discount_percent DECIMAL(5,2) DEFAULT 0,
+    zone_id INTEGER REFERENCES zones(id) ON DELETE SET NULL,
+    delivery_address TEXT,
+    latitude DECIMAL(10,7),
+    longitude DECIMAL(10,7),
     deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -304,6 +334,16 @@ INSERT INTO roles (name, description, permissions)
 SELECT 'Cashier', 'Basic POS access', ARRAY['sales.view','sales.create','inventory.view','customers.view','customers.create','reports.view']
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'Cashier');
 
+INSERT INTO roles (name, description, permissions)
+SELECT 'Rider', 'Delivery module access only', ARRAY['delivery.view','delivery.complete','dispatch.view']
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'Rider');
+
+-- Add FK from zones to employees (now that employees table exists)
+ALTER TABLE zones
+    DROP CONSTRAINT IF EXISTS zones_assigned_rider_id_fkey,
+    ADD CONSTRAINT zones_assigned_rider_id_fkey
+        FOREIGN KEY (assigned_rider_id) REFERENCES employees(id) ON DELETE SET NULL;
+
 -- Customer tiers
 INSERT INTO customer_tiers (name, min_points, discount_percent, color)
 SELECT 'Bronze', 0, 2, '#CD7F32' WHERE NOT EXISTS (SELECT 1 FROM customer_tiers WHERE name = 'Bronze');
@@ -358,6 +398,86 @@ VALUES
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- =====================================================
+-- 8. MILESTONE 2: DELIVERY, ROUTING, DISPATCH & INVOICING
+-- =====================================================
+
+-- Delivery Routes (Optimized rider paths per zone per day)
+CREATE TABLE IF NOT EXISTS delivery_routes (
+    id SERIAL PRIMARY KEY,
+    rider_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    zone_id INTEGER NOT NULL REFERENCES zones(id) ON DELETE CASCADE,
+    route_data JSONB, -- GeoJSON polyline + ordered stop sequence from OpenRouteService
+    delivery_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    estimated_distance_km DECIMAL(8,2),
+    estimated_duration_min INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Deliveries (Individual completed rider delivery records)
+CREATE TABLE IF NOT EXISTS deliveries (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    rider_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    zone_id INTEGER REFERENCES zones(id) ON DELETE SET NULL,
+    delivery_route_id INTEGER REFERENCES delivery_routes(id) ON DELETE SET NULL,
+    products JSONB NOT NULL, -- [{item_id, name, quantity, unit_price}]
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    delivery_status VARCHAR(20) NOT NULL DEFAULT 'pending', -- 'pending', 'delivered', 'failed'
+    whatsapp_sent BOOLEAN DEFAULT FALSE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Invoices (Monthly aggregated customer billing)
+CREATE TABLE IF NOT EXISTS invoices (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    billing_month DATE NOT NULL, -- First day of the billing month, e.g., 2026-05-01
+    total_deliveries INTEGER DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid', -- 'unpaid', 'paid', 'partial'
+    invoice_pdf_url TEXT, -- Supabase storage URL for PDF
+    whatsapp_sent BOOLEAN DEFAULT FALSE,
+    generated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(customer_id, billing_month)
+);
+
+-- Rider Dispatch (Daily stock allocations before and after deliveries)
+CREATE TABLE IF NOT EXISTS rider_dispatch (
+    id SERIAL PRIMARY KEY,
+    rider_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    dispatch_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    supplied_quantity DECIMAL(10,3) NOT NULL DEFAULT 0,
+    returned_quantity DECIMAL(10,3) NOT NULL DEFAULT 0,
+    delivered_quantity DECIMAL(10,3) GENERATED ALWAYS AS (supplied_quantity - returned_quantity) STORED,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Milk Inventory (Daily milk tracking — received vs sold vs delivered)
+CREATE TABLE IF NOT EXISTS milk_inventory (
+    id SERIAL PRIMARY KEY,
+    inventory_date DATE NOT NULL UNIQUE DEFAULT CURRENT_DATE,
+    total_received DECIMAL(10,3) NOT NULL DEFAULT 0, -- Litres received from supplier
+    total_pos_sold DECIMAL(10,3) NOT NULL DEFAULT 0, -- Litres sold via POS register
+    total_rider_deliveries DECIMAL(10,3) NOT NULL DEFAULT 0, -- Litres dispatched via riders
+    remaining_milk DECIMAL(10,3) GENERATED ALWAYS AS
+        (total_received - total_pos_sold - total_rider_deliveries) STORED,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for Milestone 2 tables
+CREATE INDEX IF NOT EXISTS idx_deliveries_customer ON deliveries(customer_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_rider ON deliveries(rider_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_date ON deliveries(delivered_at);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_rider_dispatch_rider ON rider_dispatch(rider_id);
+CREATE INDEX IF NOT EXISTS idx_milk_inventory_date ON milk_inventory(inventory_date);
+CREATE INDEX IF NOT EXISTS idx_customers_zone ON customers(zone_id);
+
+-- =====================================================
 -- SUCCESS NOTIFICATION
 -- =====================================================
 
@@ -370,9 +490,14 @@ BEGIN
     RAISE NOTICE '';
     RAISE NOTICE '✅ Specialized for Dairy workflows (Single Store)';
     RAISE NOTICE '✅ Weight-based pricing support enabled';
-    RAISE NOTICE '✅ Expiry & Wastage tracking enabled';
+    RAISE NOTICE '✅ Expiry tracking enabled';
     RAISE NOTICE '✅ Roles and Loyalty Tiers created';
+    RAISE NOTICE '✅ Delivery Zones & Rider management ready';
+    RAISE NOTICE '✅ OpenStreetMap Routing schema ready';
+    RAISE NOTICE '✅ Rider Dispatch & Return tracking ready';
+    RAISE NOTICE '✅ Daily Milk Inventory tracking ready';
+    RAISE NOTICE '✅ Monthly Invoicing schema ready';
     RAISE NOTICE '';
-    RAISE NOTICE '🎉 Your Cow Fresh POS is ready for operation!';
+    RAISE NOTICE '🎉 Your Cow Fresh POS v2.0 is ready for operation!';
     RAISE NOTICE '========================================';
 END $$;

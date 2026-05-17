@@ -49,8 +49,13 @@ export interface Customer {
     account_number?: string
     taxable: boolean // DEPRECATED - removed from UI and logic
     discount_percent: number
+    zone_id?: number
+    delivery_address?: string
+    latitude?: number
+    longitude?: number
     deleted: boolean
     person?: Person
+    zone?: Zone
     created_at: string
     updated_at: string
 }
@@ -257,4 +262,99 @@ export interface Payment {
 export interface AppConfig {
     key: string
     value: string
+}
+
+// ============================================================================
+// MILESTONE 2: DELIVERY, ROUTING, DISPATCH & INVOICING TYPES
+// ============================================================================
+
+export interface Zone {
+    id: number
+    zone_name: string
+    description?: string
+    assigned_rider_id?: number
+    deleted: boolean
+    rider?: Employee
+    customers?: Customer[]
+    created_at: string
+    updated_at: string
+}
+
+export type DeliveryStatus = 'pending' | 'delivered' | 'failed'
+export type InvoicePaymentStatus = 'unpaid' | 'paid' | 'partial'
+
+export interface DeliveryProduct {
+    item_id: number
+    name: string
+    quantity: number
+    unit_price: number
+    unit_type?: string
+}
+
+export interface Delivery {
+    id: number
+    customer_id: number
+    rider_id: number
+    zone_id?: number
+    delivery_route_id?: number
+    products: DeliveryProduct[]
+    total_amount: number
+    delivery_status: DeliveryStatus
+    whatsapp_sent: boolean
+    delivered_at?: string
+    created_at: string
+    customer?: Customer
+    rider?: Employee
+    zone?: Zone
+}
+
+export interface DeliveryRoute {
+    id: number
+    rider_id: number
+    zone_id: number
+    route_data?: object // GeoJSON polyline + ordered stop sequence
+    delivery_date: string
+    estimated_distance_km?: number
+    estimated_duration_min?: number
+    created_at: string
+    rider?: Employee
+    zone?: Zone
+}
+
+export interface Invoice {
+    id: number
+    customer_id: number
+    billing_month: string // ISO date string, first day of month
+    total_deliveries: number
+    total_amount: number
+    payment_status: InvoicePaymentStatus
+    invoice_pdf_url?: string
+    whatsapp_sent: boolean
+    generated_at: string
+    customer?: Customer
+}
+
+export interface RiderDispatch {
+    id: number
+    rider_id: number
+    item_id: number
+    dispatch_date: string
+    supplied_quantity: number
+    returned_quantity: number
+    delivered_quantity: number // computed: supplied - returned
+    created_at: string
+    updated_at: string
+    rider?: Employee
+    item?: Item
+}
+
+export interface MilkInventory {
+    id: number
+    inventory_date: string
+    total_received: number
+    total_pos_sold: number
+    total_rider_deliveries: number
+    remaining_milk: number // computed: received - pos_sold - rider_deliveries
+    created_at: string
+    updated_at: string
 }
