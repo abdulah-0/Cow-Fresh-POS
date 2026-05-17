@@ -1,21 +1,19 @@
 # Project State
 
-## Current Context
+## Current Position
 - **Project Name**: Cow Fresh POS
-- **Goal**: Transform general POS into Dairy specialized POS.
-- **Current Milestone**: Milestone 1
-- **Current Phase**: Phase 3 (Expiry & Inventory Management)
-
-## Recent Progress
-- [x] Codebase mapping completed.
-- [x] Project initialized with GSD documentation.
-- [x] Implementation plan created for transformation.
-
-## Decisions
-- **Multi-tenancy**: Keeping the existing tenant-based architecture.
-- **Tech Stack**: Sticking with Next.js, Tailwind 4, and Supabase as per `package.json`.
+- **Goal**: Implement specialized retail dairy POS, delivery zone mapping, Leaflet route optimization, free WhatsApp alerts, and reconciled milk inventory.
+- **Current Milestone**: Milestone 2: Dairy Specialized POS & Delivery System (v2.0)
+- **Current Phase**: Phase 1: Database Schema Expansion & Typings
+- **Plan**: Define tables in master.sql, update TypeScript models in index.ts, and verify compilation.
+- **Status**: Ready to plan Phase 1 execution
+- **Last Activity**: May 2026 — Milestone 2 successfully initialized and planned
 
 ## Next Steps
-- [x] Phase 1: Update database schema and types.
-- [x] Phase 2: Specialized POS Billing.
-- [ ] Phase 3: Expiry & Inventory Management.
+- [ ] Phase 1: Database Schema Expansion & Typings
+- [ ] Phase 2: Delivery Zone & Rider Management
+- [ ] Phase 3: OpenStreetMap & Routing Engine Integration
+- [ ] Phase 4: Rider Dispatch, Return & Daily Milk Inventory Tracking
+- [ ] Phase 5: Free WhatsApp Automation (Baileys)
+- [ ] Phase 6: Monthly Invoicing & Billing Engine
+- [ ] Phase 7: Modular Cleanup & Access Security
