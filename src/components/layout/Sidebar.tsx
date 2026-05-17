@@ -22,6 +22,11 @@ import {
     BookOpen,
     Wallet,
     Trash2,
+    Bike,
+    Navigation,
+    Milk,
+    Receipt,
+    ArrowLeftRight,
 } from 'lucide-react'
 import type { RoleName } from '@/lib/roleUtils'
 
@@ -58,12 +63,20 @@ export function Sidebar({ roleName = 'Cashier' }: SidebarProps) {
         { name: 'Expenses', href: `/expenses`, icon: Wallet, group: 'finance', roles: ['Admin', 'Manager'] },
         { name: 'Financial Summary', href: `/ledgers/summary`, icon: BarChart3, group: 'finance', roles: ['Admin'] },
         { name: 'Settings', href: `/settings`, icon: Settings2, group: 'reports', roles: ['Admin'] },
+        // Milestone 2 — Delivery Management
+        { name: 'Zones', href: `/zones`, icon: MapPin, group: 'delivery', roles: ['Admin', 'Manager'] },
+        { name: 'Delivery Routes', href: `/delivery-routes`, icon: Navigation, group: 'delivery', roles: ['Admin', 'Manager', 'Rider'] },
+        { name: 'Dispatch', href: `/dispatch`, icon: ArrowLeftRight, group: 'delivery', roles: ['Admin', 'Manager', 'Cashier'] },
+        { name: 'Milk Inventory', href: `/milk-inventory`, icon: Milk, group: 'delivery', roles: ['Admin', 'Manager'] },
+        { name: 'Monthly Invoices', href: `/invoices`, icon: Receipt, group: 'delivery', roles: ['Admin', 'Manager'] },
+        { name: 'Riders', href: `/employees`, icon: Bike, group: 'delivery', roles: ['Rider'] },
     ]
 
     const groups = [
         { key: 'main', label: 'Sales' },
         { key: 'inventory', label: 'Inventory' },
         { key: 'people', label: 'People' },
+        { key: 'delivery', label: 'Delivery' },
         { key: 'finance', label: 'Finance' },
         { key: 'reports', label: 'Analytics' },
     ]
@@ -96,7 +109,8 @@ export function Sidebar({ roleName = 'Cashier' }: SidebarProps) {
                     roleName === 'Admin' && 'bg-purple-500/20 text-purple-300',
                     roleName === 'Manager' && 'bg-blue-500/20 text-blue-300',
                     roleName === 'Cashier' && 'bg-green-500/20 text-green-300',
-                    !['Admin', 'Manager', 'Cashier'].includes(roleName) && 'bg-gray-500/20 text-gray-300',
+                    roleName === 'Rider' && 'bg-orange-500/20 text-orange-300',
+                    !['Admin', 'Manager', 'Cashier', 'Rider'].includes(roleName) && 'bg-gray-500/20 text-gray-300',
                 )}>
                     {roleName}
                 </span>
@@ -156,7 +170,7 @@ export function Sidebar({ roleName = 'Cashier' }: SidebarProps) {
 
             {/* Bottom version badge */}
             <div className="px-4 py-3 border-t border-white/10">
-                <p className="text-center text-[10px] text-purple-400/50">v1.0 · Cloud POS</p>
+                <p className="text-center text-[10px] text-purple-400/50">v2.0 · Dairy POS & Delivery</p>
             </div>
         </div>
     )

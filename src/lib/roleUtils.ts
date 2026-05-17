@@ -1,4 +1,4 @@
-export type RoleName = 'Admin' | 'Manager' | 'Cashier' | string
+export type RoleName = 'Admin' | 'Manager' | 'Cashier' | 'Rider' | string
 
 /**
  * Map of which roles can access which route segments.
@@ -17,12 +17,19 @@ export const ROUTE_ROLES: Record<string, RoleName[]> = {
     employees: ['Admin'],
     reports: ['Admin', 'Manager'],
     settings: ['Admin'],
+    // Milestone 2 — Delivery routes
+    zones: ['Admin', 'Manager'],
+    'delivery-routes': ['Admin', 'Manager', 'Rider'],
+    dispatch: ['Admin', 'Manager', 'Cashier'],
+    'milk-inventory': ['Admin', 'Manager'],
+    invoices: ['Admin', 'Manager'],
 }
 
 /**
  * Returns the default/home route for a given role.
  */
 export function getDefaultRoute(roleName: RoleName): string {
+    if (roleName === 'Rider') return `/delivery-routes`
     if (roleName === 'Cashier') return `/sales`
     return `/dashboard`
 }
