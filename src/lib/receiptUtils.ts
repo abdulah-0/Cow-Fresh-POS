@@ -46,12 +46,13 @@ export async function getCompanyInfo(): Promise<CompanyInfo> {
 /**
  * Generate receipt HTML for printing
  */
-export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo): string {
+export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo, logoUrl?: string): string {
     const saleDate = new Date(sale.sale_time).toLocaleString()
 
     // Calculate totals
     const subtotal = sale.items?.reduce((sum, item) => {
-        const itemTotal = item.item_unit_price * item.quantity_purchased
+        const qty = item.quantity ?? item.quantity_purchased ?? 0
+        const itemTotal = item.item_unit_price * qty
         const discount = itemTotal * (item.discount_percent / 100)
         return sum + (itemTotal - discount)
     }, 0) || 0
@@ -84,6 +85,13 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo): strin
                     margin-bottom: 20px;
                     border-bottom: 2px dashed #000;
                     padding-bottom: 10px;
+                }
+                .logo-container {
+                    margin-bottom: 10px;
+                }
+                .logo {
+                    max-width: 120px;
+                    height: auto;
                 }
                 .company-name {
                     font-size: 18px;
@@ -162,6 +170,11 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo): strin
             <button class="print-button no-print" onclick="window.print()">🖨️ Print Receipt</button>
             
             <div class="header">
+                ${logoUrl ? `
+                    <div class="logo-container">
+                        <img src="${logoUrl}" alt="Cow Fresh Logo" class="logo" />
+                    </div>
+                ` : ''}
                 <div class="company-name">${companyInfo.name}</div>
                 <div class="company-info">
                     ${companyInfo.address ? `${companyInfo.address}<br>` : ''}
@@ -178,31 +191,34 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo): strin
             </div>
             
             <div class="items">
-                ${sale.items?.map(item => `
-                    <div class="item">
-                        <div class="item-name">${item.item?.name || 'Item'}</div>
-                        <div class="item-details">
-                            <span>${item.quantity_purchased} x $${item.item_unit_price.toFixed(2)}</span>
-                            <span>$${(item.item_unit_price * item.quantity_purchased).toFixed(2)}</span>
-                        </div>
-                        ${item.discount_percent > 0 ? `
+                ${sale.items?.map(item => {
+                    const qty = item.quantity ?? item.quantity_purchased ?? 0
+                    return `
+                        <div class="item">
+                            <div class="item-name">${item.item?.name || 'Item'}</div>
                             <div class="item-details">
-                                <span>Discount (${item.discount_percent}%)</span>
-                                <span>-$${((item.item_unit_price * item.quantity_purchased * item.discount_percent) / 100).toFixed(2)}</span>
+                                <span>${qty} x Rs. ${item.item_unit_price.toFixed(2)}</span>
+                                <span>Rs. ${(item.item_unit_price * qty).toFixed(2)}</span>
                             </div>
-                        ` : ''}
-                    </div>
-                `).join('') || ''}
+                            ${item.discount_percent > 0 ? `
+                                <div class="item-details">
+                                    <span>Discount (${item.discount_percent}%)</span>
+                                    <span>-Rs. ${((item.item_unit_price * qty * item.discount_percent) / 100).toFixed(2)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `
+                }).join('') || ''}
             </div>
             
             <div class="totals">
                 <div class="total-line">
                     <span>Subtotal:</span>
-                    <span>$${subtotal.toFixed(2)}</span>
+                    <span>Rs. ${subtotal.toFixed(2)}</span>
                 </div>
                 <div class="total-line grand-total">
                     <span>TOTAL:</span>
-                    <span>$${total.toFixed(2)}</span>
+                    <span>Rs. ${total.toFixed(2)}</span>
                 </div>
             </div>
             
@@ -211,13 +227,13 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo): strin
                 ${sale.payments?.map(payment => `
                     <div class="total-line">
                         <span>${payment.payment_type.toUpperCase()}:</span>
-                        <span>$${payment.payment_amount.toFixed(2)}</span>
+                        <span>Rs. ${payment.payment_amount.toFixed(2)}</span>
                     </div>
                 `).join('') || ''}
                 ${change > 0 ? `
                     <div class="total-line" style="margin-top: 8px;">
                         <span><strong>CHANGE:</strong></span>
-                        <span><strong>$${change.toFixed(2)}</strong></span>
+                        <span><strong>Rs. ${change.toFixed(2)}</strong></span>
                     </div>
                 ` : ''}
             </div>
@@ -261,7 +277,8 @@ export async function printReceipt(saleId: number): Promise<void> {
     }
 
     const companyInfo = await getCompanyInfo()
-    const html = generateReceiptHTML(sale as Sale, companyInfo)
+    const logoUrl = typeof window !== 'undefined' ? `${window.location.origin}/CF-logo.png` : undefined
+    const html = generateReceiptHTML(sale as Sale, companyInfo, logoUrl)
 
     const printWindow = window.open('', '_blank', 'width=400,height=600')
     if (printWindow) {
@@ -281,7 +298,8 @@ export async function printReceipt(saleId: number): Promise<void> {
  * Download receipt as HTML file
  */
 export function downloadReceipt(sale: Sale, companyInfo: CompanyInfo): void {
-    const html = generateReceiptHTML(sale, companyInfo)
+    const logoUrl = typeof window !== 'undefined' ? `${window.location.origin}/CF-logo.png` : undefined
+    const html = generateReceiptHTML(sale, companyInfo, logoUrl)
     const blob = new Blob([html], { type: 'text/html' })
     const url = URL.createObjectURL(blob)
 
