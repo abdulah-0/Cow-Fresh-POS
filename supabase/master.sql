@@ -266,28 +266,37 @@ CREATE INDEX IF NOT EXISTS idx_inventory_item ON inventory(item_id);
 -- =====================================================
 
 -- Default roles
-INSERT INTO roles (name, description, permissions) VALUES
-('Admin', 'Full system access',
- ARRAY['sales.view','sales.create','sales.edit','sales.delete','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.delete','inventory.adjust','customers.view','customers.create','customers.edit','customers.delete','employees.view','employees.create','employees.edit','employees.delete','reports.view','reports.export','settings.view','settings.edit','roles.manage']),
-('Manager', 'Management access',
- ARRAY['sales.view','sales.create','sales.edit','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.adjust','customers.view','customers.create','customers.edit','employees.view','reports.view','reports.export']),
-('Cashier', 'Basic POS access',
- ARRAY['sales.view','sales.create','inventory.view','customers.view','customers.create','reports.view'])
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO roles (name, description, permissions)
+SELECT 'Admin', 'Full system access', ARRAY['sales.view','sales.create','sales.edit','sales.delete','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.delete','inventory.adjust','customers.view','customers.create','customers.edit','customers.delete','employees.view','employees.create','employees.edit','employees.delete','reports.view','reports.export','settings.view','settings.edit','roles.manage']
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'Admin');
+
+INSERT INTO roles (name, description, permissions)
+SELECT 'Manager', 'Management access', ARRAY['sales.view','sales.create','sales.edit','sales.refund','inventory.view','inventory.create','inventory.edit','inventory.adjust','customers.view','customers.create','customers.edit','employees.view','reports.view','reports.export']
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'Manager');
+
+INSERT INTO roles (name, description, permissions)
+SELECT 'Cashier', 'Basic POS access', ARRAY['sales.view','sales.create','inventory.view','customers.view','customers.create','reports.view']
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'Cashier');
 
 -- Customer tiers
-INSERT INTO customer_tiers (name, min_points, discount_percent, color) VALUES
-('Bronze', 0, 2, '#CD7F32'),
-('Silver', 500, 5, '#C0C0C0'),
-('Gold', 1000, 10, '#FFD700'),
-('Platinum', 2500, 15, '#E5E4E2'),
-('Diamond', 5000, 20, '#B9F2FF')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO customer_tiers (name, min_points, discount_percent, color)
+SELECT 'Bronze', 0, 2, '#CD7F32' WHERE NOT EXISTS (SELECT 1 FROM customer_tiers WHERE name = 'Bronze');
+
+INSERT INTO customer_tiers (name, min_points, discount_percent, color)
+SELECT 'Silver', 500, 5, '#C0C0C0' WHERE NOT EXISTS (SELECT 1 FROM customer_tiers WHERE name = 'Silver');
+
+INSERT INTO customer_tiers (name, min_points, discount_percent, color)
+SELECT 'Gold', 1000, 10, '#FFD700' WHERE NOT EXISTS (SELECT 1 FROM customer_tiers WHERE name = 'Gold');
+
+INSERT INTO customer_tiers (name, min_points, discount_percent, color)
+SELECT 'Platinum', 2500, 15, '#E5E4E2' WHERE NOT EXISTS (SELECT 1 FROM customer_tiers WHERE name = 'Platinum');
+
+INSERT INTO customer_tiers (name, min_points, discount_percent, color)
+SELECT 'Diamond', 5000, 20, '#B9F2FF' WHERE NOT EXISTS (SELECT 1 FROM customer_tiers WHERE name = 'Diamond');
 
 -- Default stock location
 INSERT INTO stock_locations (location_name)
-VALUES ('Main Store')
-ON CONFLICT (location_name) DO NOTHING;
+SELECT 'Main Store' WHERE NOT EXISTS (SELECT 1 FROM stock_locations WHERE location_name = 'Main Store');
 
 -- =====================================================
 -- SUCCESS NOTIFICATION
