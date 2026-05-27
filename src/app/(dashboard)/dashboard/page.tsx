@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart3, ShoppingCart, Package, Users, DollarSign, TrendingUp, ArrowUpRight, Clock, AlertTriangle } from 'lucide-react'
+import { BarChart3, ShoppingCart, Package, Users, DollarSign, TrendingUp, ArrowUpRight, Clock, AlertTriangle, Droplets, Milk, Activity } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
@@ -21,7 +21,9 @@ export default async function DashboardPage() {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const [salesData, itemsData, customersData, lowStockData, expiringData] = await Promise.all([
+    const todayStr = new Date(new Date().getTime() + 5 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+    const [salesData, itemsData, customersData, lowStockData, expiringData, todayMilkInvResult, todayPackingResult] = await Promise.all([
         supabase.from('sales').select('sale_total')
             .gte('sale_time', today.toISOString()).lt('sale_time', tomorrow.toISOString()),
         supabase.from('items').select('id', { count: 'exact' }).eq('deleted', false),
@@ -33,7 +35,9 @@ export default async function DashboardPage() {
             .lte('expiry_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
             .gte('expiry_date', new Date().toISOString())
             .order('expiry_date')
-            .limit(5)
+            .limit(5),
+        supabase.from('milk_inventory').select('*').eq('inventory_date', todayStr).maybeSingle(),
+        supabase.from('packing_entries').select('*').eq('date', todayStr).maybeSingle()
     ])
 
     const todaysSales = salesData.data?.reduce((sum: number, sale: any) => sum + parseFloat(sale.sale_total || '0'), 0) || 0
@@ -44,6 +48,12 @@ export default async function DashboardPage() {
         return totalStock <= (item.reorder_level || 0)
     }).length || 0
     const expiringItems = expiringData.data || []
+
+    const milkReceived = parseFloat(todayMilkInvResult.data?.total_received || '0')
+    const milkUsedPacking = parseFloat(todayPackingResult.data?.total_milk_used || '0')
+    const milkSoldPos = parseFloat(todayMilkInvResult.data?.total_pos_sold || '0')
+    const milkDeliveredRiders = parseFloat(todayMilkInvResult.data?.total_rider_deliveries || '0')
+    const milkRemaining = milkReceived - milkUsedPacking - milkSoldPos - milkDeliveredRiders
 
     const { data: recentSales } = await supabase
         .from('sales')
@@ -161,6 +171,96 @@ export default async function DashboardPage() {
                         <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${stat.gradient} opacity-50`} />
                     </Card>
                 ))}
+            </div>
+
+            {/* Live Raw Milk Lifecycle Section */}
+            <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-indigo-600" />
+                    <h2 className="text-base font-bold text-gray-800 tracking-tight">Today&apos;s Live Raw Milk Lifecycle</h2>
+                    <Badge variant="outline" className="ml-2 bg-indigo-50/50 text-indigo-700 border-indigo-150 text-[10px] py-0.5 px-2 rounded-full font-bold">Real-time Analytics</Badge>
+                </div>
+                
+                <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
+                    {/* Card 1: Total Received */}
+                    <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+                            <CardTitle className="text-xs font-semibold text-gray-500">Total Received</CardTitle>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-sky-600 shadow-sm">
+                                <Droplets className="h-3.5 w-3.5 text-white" />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pb-4 px-4">
+                            <div className="text-xl font-extrabold text-gray-900">{milkReceived.toFixed(1)} <span className="text-[10px] font-semibold text-gray-400">L</span></div>
+                            <p className="mt-0.5 text-[10px] text-gray-400">Farm supply intake</p>
+                        </CardContent>
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-sky-600 opacity-50" />
+                    </Card>
+
+                    {/* Card 2: Used in Packing */}
+                    <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+                            <CardTitle className="text-xs font-semibold text-gray-500">Used in Packing</CardTitle>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm">
+                                <Milk className="h-3.5 w-3.5 text-white" />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pb-4 px-4">
+                            <div className="text-xl font-extrabold text-gray-900">{milkUsedPacking.toFixed(1)} <span className="text-[10px] font-semibold text-gray-400">L</span></div>
+                            <p className="mt-0.5 text-[10px] text-gray-400">Converted to retail</p>
+                        </CardContent>
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 opacity-50" />
+                    </Card>
+
+                    {/* Card 3: POS Sold */}
+                    <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+                            <CardTitle className="text-xs font-semibold text-gray-500">POS Raw Sold</CardTitle>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                                <ShoppingCart className="h-3.5 w-3.5 text-white" />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pb-4 px-4">
+                            <div className="text-xl font-extrabold text-gray-900">{milkSoldPos.toFixed(1)} <span className="text-[10px] font-semibold text-gray-400">L</span></div>
+                            <p className="mt-0.5 text-[10px] text-gray-400">Sold from counter</p>
+                        </CardContent>
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-600 opacity-50" />
+                    </Card>
+
+                    {/* Card 4: Rider Dispatched */}
+                    <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+                            <CardTitle className="text-xs font-semibold text-gray-500">Rider Delivered</CardTitle>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 shadow-sm">
+                                <Activity className="h-3.5 w-3.5 text-white" />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pb-4 px-4">
+                            <div className="text-xl font-extrabold text-gray-900">{milkDeliveredRiders.toFixed(1)} <span className="text-[10px] font-semibold text-gray-400">L</span></div>
+                            <p className="mt-0.5 text-[10px] text-gray-400">Delivered via riders</p>
+                        </CardContent>
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500 to-orange-600 opacity-50" />
+                    </Card>
+
+                    {/* Card 5: Remaining Milk */}
+                    <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow col-span-2 md:col-span-1">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+                            <CardTitle className="text-xs font-bold text-gray-600">Remaining Raw</CardTitle>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 shadow-sm">
+                                <Droplets className="h-3.5 w-3.5 text-white" />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pb-4 px-4">
+                            <div className="text-xl font-extrabold text-gray-900">
+                                <span className={milkRemaining >= 0 ? 'text-indigo-600' : 'text-red-600'}>
+                                    {milkRemaining.toFixed(1)} L
+                                </span>
+                            </div>
+                            <p className="mt-0.5 text-[10px] text-gray-400">Unpackaged stock</p>
+                        </CardContent>
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-600 opacity-50" />
+                    </Card>
+                </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-7">

@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Header } from '@/components/layout/Header'
+import { DashboardShell } from '@/components/layout/DashboardShell'
 import { ToastProvider } from '@/components/ui/toast'
 import { RoleProvider } from '@/components/providers/RoleProvider'
 import { getUserRole } from '@/lib/serverRoleUtils'
@@ -33,13 +32,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return (
         <ToastProvider>
             <RoleProvider roleName={roleName} permissions={permissions}>
-                <div className="flex h-screen overflow-hidden">
-                    <Sidebar roleName={roleName} />
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                        <Header user={user} />
-                        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
-                    </div>
-                </div>
+                <DashboardShell user={user} roleName={roleName}>
+                    {children}
+                </DashboardShell>
             </RoleProvider>
         </ToastProvider>
     )

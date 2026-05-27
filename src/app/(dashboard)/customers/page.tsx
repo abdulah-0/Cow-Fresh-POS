@@ -102,7 +102,7 @@ export default function CustomersPage() {
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                                placeholder="Search customers by name, email, phone, or company..."
+                                placeholder="Search customers by name, phone, zone, or company..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-10"
@@ -136,7 +136,7 @@ export default function CustomersPage() {
                                 <TableRow>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Company</TableHead>
-                                    <TableHead>Email</TableHead>
+                                    <TableHead>Zone</TableHead>
                                     <TableHead>Phone</TableHead>
                                     <TableHead>Discount</TableHead>
                                     <TableHead>Status</TableHead>
@@ -152,8 +152,14 @@ export default function CustomersPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell>{customer.company_name || '-'}</TableCell>
-                                        <TableCell className="text-sm text-gray-600">
-                                            {customer.person.email || '-'}
+                                        <TableCell className="text-sm">
+                                            {customer.zone?.zone_name ? (
+                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+                                                    {customer.zone.zone_name}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-gray-400 dark:text-gray-600">No Zone Assigned</span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-sm">
                                             {customer.person.phone_number || '-'}

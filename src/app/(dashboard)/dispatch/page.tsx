@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
-import { getDispatchByDate, upsertDispatch, updateReturnedQuantity, getRidersForDispatch, getItemsForDispatch } from '@/lib/services/dispatchService'
+import { getDispatchByDate, upsertDispatch, updateReturnedQuantity, updateReturnedQuantityAndPackets, getRidersForDispatch, getItemsForDispatch } from '@/lib/services/dispatchService'
 
 function toLocalDate(d: Date) { return d.toISOString().split('T')[0] }
 
@@ -23,11 +23,22 @@ export default function DispatchPage() {
     const [showAddDialog, setShowAddDialog] = useState(false)
     const [riders, setRiders] = useState<any[]>([])
     const [items, setItems] = useState<any[]>([])
-    const [form, setForm] = useState({ rider_id: '', item_id: '', supplied_quantity: '', returned_quantity: '0' })
+    const [form, setForm] = useState({
+        rider_id: '',
+        item_id: '',
+        supplied_quantity: '',
+        returned_quantity: '0',
+        picked_milk_packets: '0',
+        picked_yogurt_packets: '0',
+        dropped_milk_packets: '0',
+        dropped_yogurt_packets: '0'
+    })
     const [saving, setSaving] = useState(false)
     const [showReturnDialog, setShowReturnDialog] = useState(false)
     const [editingDispatch, setEditingDispatch] = useState<any>(null)
     const [returnQty, setReturnQty] = useState('')
+    const [droppedMilk, setDroppedMilk] = useState('0')
+    const [droppedYogurt, setDroppedYogurt] = useState('0')
     const [updatingReturn, setUpdatingReturn] = useState(false)
     const { showToast } = useToast()
 
@@ -43,7 +54,16 @@ export default function DispatchPage() {
     const openAddDialog = async () => {
         const [r, i] = await Promise.all([getRidersForDispatch(), getItemsForDispatch()])
         setRiders(r); setItems(i)
-        setForm({ rider_id: '', item_id: '', supplied_quantity: '', returned_quantity: '0' })
+        setForm({
+            rider_id: '',
+            item_id: '',
+            supplied_quantity: '',
+            returned_quantity: '0',
+            picked_milk_packets: '0',
+            picked_yogurt_packets: '0',
+            dropped_milk_packets: '0',
+            dropped_yogurt_packets: '0'
+        })
         setShowAddDialog(true)
     }
 
@@ -52,9 +72,25 @@ export default function DispatchPage() {
         const supplied = parseFloat(form.supplied_quantity), returned = parseFloat(form.returned_quantity) || 0
         if (supplied <= 0) return showToast('error', 'Supplied quantity must be positive')
         if (returned < 0 || returned > supplied) return showToast('error', 'Return cannot exceed supplied')
+        
+        const pickedMilk = parseInt(form.picked_milk_packets) || 0
+        const pickedYogurt = parseInt(form.picked_yogurt_packets) || 0
+        const droppedMilk = parseInt(form.dropped_milk_packets) || 0
+        const droppedYogurt = parseInt(form.dropped_yogurt_packets) || 0
+
         setSaving(true)
         try {
-            await upsertDispatch({ rider_id: +form.rider_id, item_id: +form.item_id, dispatch_date: selectedDate, supplied_quantity: supplied, returned_quantity: returned })
+            await upsertDispatch({
+                rider_id: +form.rider_id,
+                item_id: +form.item_id,
+                dispatch_date: selectedDate,
+                supplied_quantity: supplied,
+                returned_quantity: returned,
+                picked_milk_packets: pickedMilk,
+                dropped_milk_packets: droppedMilk,
+                picked_yogurt_packets: pickedYogurt,
+                dropped_yogurt_packets: droppedYogurt
+            })
             showToast('success', 'Dispatch record saved'); setShowAddDialog(false); loadDispatches()
         } catch { showToast('error', 'Failed to save dispatch') } finally { setSaving(false) }
     }
@@ -63,9 +99,13 @@ export default function DispatchPage() {
         if (!editingDispatch) return
         const qty = parseFloat(returnQty)
         if (isNaN(qty) || qty < 0 || qty > editingDispatch.supplied_quantity) return showToast('error', 'Invalid return quantity')
+        const droppedM = parseInt(droppedMilk) || 0
+        const droppedY = parseInt(droppedYogurt) || 0
+        if (droppedM < 0 || droppedY < 0) return showToast('error', 'Dropped packets cannot be negative')
+
         setUpdatingReturn(true)
         try {
-            await updateReturnedQuantity(editingDispatch.id, qty)
+            await updateReturnedQuantityAndPackets(editingDispatch.id, qty, droppedM, droppedY)
             showToast('success', 'Return updated'); setShowReturnDialog(false); loadDispatches()
         } catch { showToast('error', 'Failed to update return') } finally { setUpdatingReturn(false) }
     }
@@ -144,7 +184,10 @@ export default function DispatchPage() {
                             <TableHeader><TableRow>
                                 <TableHead>Rider</TableHead><TableHead>Product</TableHead>
                                 <TableHead className="text-right">Supplied</TableHead><TableHead className="text-right">Returned</TableHead>
-                                <TableHead className="text-right">Delivered</TableHead><TableHead className="text-right">Value</TableHead>
+                                <TableHead className="text-right">Delivered</TableHead>
+                                <TableHead className="text-center">Milk Packets (P/D/Net)</TableHead>
+                                <TableHead className="text-center">Yogurt Packets (P/D/Net)</TableHead>
+                                <TableHead className="text-right">Value</TableHead>
                                 <TableHead>Status</TableHead><TableHead className="text-right">Action</TableHead>
                             </TableRow></TableHeader>
                             <TableBody>
@@ -164,12 +207,48 @@ export default function DispatchPage() {
                                             <TableCell className="text-right font-mono">{d.supplied_quantity}</TableCell>
                                             <TableCell className="text-right font-mono">{d.returned_quantity > 0 ? <span className="text-amber-600">{d.returned_quantity}</span> : <span className="text-gray-300">—</span>}</TableCell>
                                             <TableCell className="text-right font-mono font-semibold">{delivered}</TableCell>
+                                            <TableCell className="text-center font-mono text-sm">
+                                                {d.picked_milk_packets || d.dropped_milk_packets ? (
+                                                    <span className="inline-flex gap-1.5 items-center">
+                                                        <span className="text-blue-600">{d.picked_milk_packets || 0}</span>
+                                                        <span className="text-gray-300">/</span>
+                                                        <span className="text-amber-600">{d.dropped_milk_packets || 0}</span>
+                                                        <span className="text-gray-300">/</span>
+                                                        <span className="font-semibold text-green-700">{(d.picked_milk_packets || 0) - (d.dropped_milk_packets || 0)}</span>
+                                                    </span>
+                                                ) : <span className="text-gray-300">—</span>}
+                                            </TableCell>
+                                            <TableCell className="text-center font-mono text-sm">
+                                                {d.picked_yogurt_packets || d.dropped_yogurt_packets ? (
+                                                    <span className="inline-flex gap-1.5 items-center">
+                                                        <span className="text-blue-600">{d.picked_yogurt_packets || 0}</span>
+                                                        <span className="text-gray-300">/</span>
+                                                        <span className="text-amber-600">{d.dropped_yogurt_packets || 0}</span>
+                                                        <span className="text-gray-300">/</span>
+                                                        <span className="font-semibold text-green-700">{(d.picked_yogurt_packets || 0) - (d.dropped_yogurt_packets || 0)}</span>
+                                                    </span>
+                                                ) : <span className="text-gray-300">—</span>}
+                                            </TableCell>
                                             <TableCell className="text-right font-mono text-green-700">{value > 0 ? `Rs. ${value.toLocaleString('en-PK')}` : '—'}</TableCell>
                                             <TableCell>
                                                 {reconciled ? <Badge className="bg-green-100 text-green-700 border-green-200 text-xs"><Check className="h-3 w-3 mr-1" />Reconciled</Badge>
                                                     : <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Pending</Badge>}
                                             </TableCell>
-                                            <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => { setEditingDispatch(d); setReturnQty(String(d.returned_quantity || 0)); setShowReturnDialog(true) }}><Edit className="h-4 w-4 text-gray-500" /></Button></TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setEditingDispatch(d)
+                                                        setReturnQty(String(d.returned_quantity || 0))
+                                                        setDroppedMilk(String(d.dropped_milk_packets || 0))
+                                                        setDroppedYogurt(String(d.dropped_yogurt_packets || 0))
+                                                        setShowReturnDialog(true)
+                                                    }}
+                                                >
+                                                    <Edit className="h-4 w-4 text-gray-500" />
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     )
                                 })}
@@ -195,10 +274,24 @@ export default function DispatchPage() {
                                 {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit_type || 'unit'})</option>)}
                             </select></div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div><Label htmlFor="supplied">Supplied Qty *</Label><Input id="supplied" type="number" min="0" step="0.5" value={form.supplied_quantity} onChange={e => setForm(f => ({ ...f, supplied_quantity: e.target.value }))} className="mt-1" /></div>
-                            <div><Label htmlFor="returned">Returned Qty</Label><Input id="returned" type="number" min="0" step="0.5" value={form.returned_quantity} onChange={e => setForm(f => ({ ...f, returned_quantity: e.target.value }))} className="mt-1" /></div>
+                            <div><Label htmlFor="supplied">Supplied Qty (L/KG) *</Label><Input id="supplied" type="number" min="0" step="0.5" value={form.supplied_quantity} onChange={e => setForm(f => ({ ...f, supplied_quantity: e.target.value }))} className="mt-1" /></div>
+                            <div><Label htmlFor="returned">Returned Qty (L/KG)</Label><Input id="returned" type="number" min="0" step="0.5" value={form.returned_quantity} onChange={e => setForm(f => ({ ...f, returned_quantity: e.target.value }))} className="mt-1" /></div>
                         </div>
-                        {form.supplied_quantity && <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">Net delivered: <strong>{(parseFloat(form.supplied_quantity) - parseFloat(form.returned_quantity || '0')).toFixed(1)}</strong></div>}
+                        <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                            <div><Label htmlFor="picked_milk">Picked Milk Packets</Label><Input id="picked_milk" type="number" min="0" value={form.picked_milk_packets} onChange={e => setForm(f => ({ ...f, picked_milk_packets: e.target.value }))} className="mt-1" /></div>
+                            <div><Label htmlFor="dropped_milk">Dropped Milk Packets</Label><Input id="dropped_milk" type="number" min="0" value={form.dropped_milk_packets} onChange={e => setForm(f => ({ ...f, dropped_milk_packets: e.target.value }))} className="mt-1" /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                            <div><Label htmlFor="picked_yogurt">Picked Yogurt Packets</Label><Input id="picked_yogurt" type="number" min="0" value={form.picked_yogurt_packets} onChange={e => setForm(f => ({ ...f, picked_yogurt_packets: e.target.value }))} className="mt-1" /></div>
+                            <div><Label htmlFor="dropped_yogurt">Dropped Yogurt Packets</Label><Input id="dropped_yogurt" type="number" min="0" value={form.dropped_yogurt_packets} onChange={e => setForm(f => ({ ...f, dropped_yogurt_packets: e.target.value }))} className="mt-1" /></div>
+                        </div>
+                        {form.supplied_quantity && (
+                            <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 space-y-1 dark:bg-blue-950/30 dark:text-blue-300">
+                                <div>Net delivered Qty: <strong>{(parseFloat(form.supplied_quantity) - parseFloat(form.returned_quantity || '0')).toFixed(1)}</strong> L/KG</div>
+                                <div>Net delivered Milk Packets: <strong>{parseInt(form.picked_milk_packets || '0') - parseInt(form.dropped_milk_packets || '0')}</strong></div>
+                                <div>Net delivered Yogurt Packets: <strong>{parseInt(form.picked_yogurt_packets || '0') - parseInt(form.dropped_yogurt_packets || '0')}</strong></div>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
@@ -212,12 +305,24 @@ export default function DispatchPage() {
                 <DialogContent className="sm:max-w-sm">
                     <DialogHeader><DialogTitle>Update Return Quantity</DialogTitle></DialogHeader>
                     {editingDispatch && <div className="space-y-4 py-2">
-                        <div className="rounded-lg bg-gray-50 p-3 text-sm">
+                        <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-zinc-900">
                             <p className="font-medium">{editingDispatch.rider?.person?.first_name} {editingDispatch.rider?.person?.last_name}</p>
-                            <p className="text-gray-500">{editingDispatch.item?.name} — Supplied: {editingDispatch.supplied_quantity}</p>
+                            <p className="text-gray-500 dark:text-gray-400">{editingDispatch.item?.name} — Supplied: {editingDispatch.supplied_quantity}</p>
                         </div>
-                        <div><Label htmlFor="return-qty">Returned Quantity</Label><Input id="return-qty" type="number" min="0" max={editingDispatch.supplied_quantity} step="0.5" value={returnQty} onChange={e => setReturnQty(e.target.value)} className="mt-1" /><p className="text-xs text-gray-400 mt-1">Max: {editingDispatch.supplied_quantity}</p></div>
-                        {returnQty && <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Net delivered: <strong>{(editingDispatch.supplied_quantity - parseFloat(returnQty || '0')).toFixed(1)}</strong></div>}
+                        <div><Label htmlFor="return-qty">Returned Quantity (L/KG)</Label><Input id="return-qty" type="number" min="0" max={editingDispatch.supplied_quantity} step="0.5" value={returnQty} onChange={e => setReturnQty(e.target.value)} className="mt-1" /><p className="text-xs text-gray-400 mt-1">Max: {editingDispatch.supplied_quantity}</p></div>
+                        
+                        <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                            <div><Label htmlFor="dropped-milk-qty">Dropped Milk Packets</Label><Input id="dropped-milk-qty" type="number" min="0" value={droppedMilk} onChange={e => setDroppedMilk(e.target.value)} className="mt-1" /></div>
+                            <div><Label htmlFor="dropped-yogurt-qty">Dropped Yogurt Packets</Label><Input id="dropped-yogurt-qty" type="number" min="0" value={droppedYogurt} onChange={e => setDroppedYogurt(e.target.value)} className="mt-1" /></div>
+                        </div>
+
+                        {returnQty && (
+                            <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 space-y-1 dark:bg-green-950/30 dark:text-green-300">
+                                <div>Net delivered Qty: <strong>{(editingDispatch.supplied_quantity - parseFloat(returnQty || '0')).toFixed(1)}</strong> L/KG</div>
+                                <div>Net delivered Milk Packets: <strong>{(editingDispatch.picked_milk_packets || 0) - parseInt(droppedMilk || '0')}</strong></div>
+                                <div>Net delivered Yogurt Packets: <strong>{(editingDispatch.picked_yogurt_packets || 0) - parseInt(droppedYogurt || '0')}</strong></div>
+                            </div>
+                        )}
                     </div>}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowReturnDialog(false)}>Cancel</Button>

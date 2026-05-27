@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LogOut, Settings, Building2, ShoppingCart, ChevronRight } from 'lucide-react'
+import { LogOut, Settings, Building2, ShoppingCart, ChevronRight, Menu } from 'lucide-react'
 
 interface HeaderProps {
     user?: {
@@ -21,6 +21,7 @@ interface HeaderProps {
             full_name?: string
         }
     }
+    onMenuClick?: () => void
 }
 
 const routeLabels: Record<string, string> = {
@@ -37,7 +38,7 @@ const routeLabels: Record<string, string> = {
     reports: 'Reports',
 }
 
-export function Header({ user }: HeaderProps) {
+export function Header({ user, onMenuClick }: HeaderProps) {
     const router = useRouter()
     const pathname = usePathname()
     const supabase = createClient()
@@ -62,9 +63,18 @@ export function Header({ user }: HeaderProps) {
     const pageLabel = routeLabels[currentPage] || currentPage
 
     return (
-        <header className="flex h-16 items-center justify-between border-b bg-white px-6 shadow-sm">
+        <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6 shadow-sm">
             {/* Left: Breadcrumb */}
             <div className="flex items-center gap-2 text-sm">
+                {onMenuClick && (
+                    <button
+                        onClick={onMenuClick}
+                        className="mr-1 rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 lg:hidden focus:outline-none transition-colors"
+                        aria-label="Toggle sidebar"
+                    >
+                        <Menu className="h-5 w-5" />
+                    </button>
+                )}
                 <div className="flex items-center gap-1.5">
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <span className="font-semibold text-gray-900">Cow Fresh Dairy</span>

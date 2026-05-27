@@ -19,6 +19,8 @@ export interface CustomerInput {
     taxable?: boolean
     tax_id?: string
     discount_percent?: number
+    zone_id?: number
+    delivery_address?: string
 }
 
 /**
@@ -59,6 +61,8 @@ export async function createCustomer(customer: CustomerInput): Promise<any> {
                 taxable: customer.taxable !== false,
                 tax_id: customer.tax_id,
                 discount_percent: customer.discount_percent || 0,
+                zone_id: customer.zone_id,
+                delivery_address: customer.delivery_address || customer.person.address_1,
                 deleted: false,
             })
             .select()
@@ -120,11 +124,14 @@ export async function updateCustomer(customerId: number, customer: Partial<Custo
                 taxable: customer.taxable,
                 tax_id: customer.tax_id,
                 discount_percent: customer.discount_percent,
+                zone_id: customer.zone_id,
+                delivery_address: customer.delivery_address || customer.person?.address_1,
             })
             .eq('id', customerId)
             .select(`
                 *,
-                person:people(*)
+                person:people(*),
+                zone:zones(id, zone_name)
             `)
             .single()
 
@@ -171,7 +178,8 @@ export async function getCustomers(
             .from('customers')
             .select(`
                 *,
-                person:people(*)
+                person:people(*),
+                zone:zones(id, zone_name)
             `)
             .eq('deleted', false)
             .order('id', { ascending: false })
@@ -208,7 +216,8 @@ export async function getCustomerById(customerId: number): Promise<any> {
             .from('customers')
             .select(`
                 *,
-                person:people(*)
+                person:people(*),
+                zone:zones(id, zone_name)
             `)
             .eq('id', customerId)
             .single()
@@ -242,6 +251,32 @@ export async function getCustomerPurchaseHistory(customerId: number): Promise<an
         return data || []
     } catch (error) {
         console.error('Error getting purchase history:', error)
+        return []
+    }
+}
+
+/**
+ * Get customers by zone
+ */
+export async function getCustomersByZone(zoneId: number): Promise<any[]> {
+    const supabase = createClient()
+
+    try {
+        const { data, error } = await supabase
+            .from('customers')
+            .select(`
+                *,
+                person:people(*),
+                zone:zones(id, zone_name)
+            `)
+            .eq('deleted', false)
+            .eq('zone_id', zoneId)
+            .order('id', { ascending: false })
+
+        if (error) throw error
+        return data || []
+    } catch (error) {
+        console.error('Error getting customers by zone:', error)
         return []
     }
 }

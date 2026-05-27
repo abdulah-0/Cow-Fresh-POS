@@ -342,6 +342,10 @@ export interface RiderDispatch {
     supplied_quantity: number
     returned_quantity: number
     delivered_quantity: number // computed: supplied - returned
+    picked_milk_packets?: number
+    dropped_milk_packets?: number
+    picked_yogurt_packets?: number
+    dropped_yogurt_packets?: number
     created_at: string
     updated_at: string
     rider?: Employee
@@ -358,3 +362,26 @@ export interface MilkInventory {
     created_at: string
     updated_at: string
 }
+
+// ============================================================================
+// MILESTONE 3: PACKING MODULE TYPES
+// ============================================================================
+
+export interface PackingEntry {
+    id: string // UUID
+    date: string
+    total_milk_received: number
+    total_milk_used: number
+    remaining_milk: number
+    created_at: string
+    updated_at: string
+    products?: PackingProduct[]
+}
+
+export interface PackingProduct {
+    packing_entry_id: string
+    product_id: number
+    quantity_produced: number
+    product?: Item
+}
+

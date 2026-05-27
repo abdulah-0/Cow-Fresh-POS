@@ -7,6 +7,10 @@ export interface DispatchInput {
     dispatch_date: string // ISO date YYYY-MM-DD
     supplied_quantity: number
     returned_quantity: number
+    picked_milk_packets?: number
+    dropped_milk_packets?: number
+    picked_yogurt_packets?: number
+    dropped_yogurt_packets?: number
 }
 
 /**
@@ -25,6 +29,10 @@ export async function upsertDispatch(input: DispatchInput): Promise<RiderDispatc
                     dispatch_date: input.dispatch_date,
                     supplied_quantity: input.supplied_quantity,
                     returned_quantity: input.returned_quantity,
+                    picked_milk_packets: input.picked_milk_packets || 0,
+                    dropped_milk_packets: input.dropped_milk_packets || 0,
+                    picked_yogurt_packets: input.picked_yogurt_packets || 0,
+                    dropped_yogurt_packets: input.dropped_yogurt_packets || 0,
                 },
                 { onConflict: 'rider_id,item_id,dispatch_date', ignoreDuplicates: false }
             )
@@ -109,6 +117,34 @@ export async function updateReturnedQuantity(
         if (error) throw error
     } catch (error) {
         console.error('Error updating returned quantity:', error)
+        throw error
+    }
+}
+
+/**
+ * Update returned quantity and packets for a dispatch record.
+ */
+export async function updateReturnedQuantityAndPackets(
+    dispatchId: number,
+    returnedQuantity: number,
+    droppedMilkPackets: number = 0,
+    droppedYogurtPackets: number = 0
+): Promise<void> {
+    const supabase = createClient()
+    try {
+        const { error } = await supabase
+            .from('rider_dispatch')
+            .update({
+                returned_quantity: returnedQuantity,
+                dropped_milk_packets: droppedMilkPackets,
+                dropped_yogurt_packets: droppedYogurtPackets,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', dispatchId)
+
+        if (error) throw error
+    } catch (error) {
+        console.error('Error updating returned quantity and packets:', error)
         throw error
     }
 }
