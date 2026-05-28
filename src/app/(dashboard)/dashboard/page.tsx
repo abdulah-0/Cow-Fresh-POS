@@ -23,7 +23,8 @@ export default async function DashboardPage() {
 
     const todayStr = new Date(new Date().getTime() + 5 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    const [salesData, itemsData, customersData, lowStockData, expiringData, todayMilkInvResult, todayPackingResult] = await Promise.all([
+    // Original core dashboard queries
+    const [salesData, itemsData, customersData, lowStockData, expiringData] = await Promise.all([
         supabase.from('sales').select('sale_total')
             .gte('sale_time', today.toISOString()).lt('sale_time', tomorrow.toISOString()),
         supabase.from('items').select('id', { count: 'exact' }).eq('deleted', false),
@@ -35,24 +36,37 @@ export default async function DashboardPage() {
             .lte('expiry_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
             .gte('expiry_date', new Date().toISOString())
             .order('expiry_date')
-            .limit(5),
-        supabase.from('milk_inventory').select('*').eq('inventory_date', todayStr).maybeSingle(),
-        supabase.from('packing_entries').select('*').eq('date', todayStr).maybeSingle()
+            .limit(5)
     ])
 
-    const todaysSales = salesData.data?.reduce((sum: number, sale: any) => sum + parseFloat(sale.sale_total || '0'), 0) || 0
-    const totalItems = itemsData.count || 0
-    const totalCustomers = customersData.count || 0
-    const lowStockCount = lowStockData.data?.filter((item: any) => {
+    // Gracefully isolated milk lifecycle queries to prevent layout crashes
+    let todayMilkInvResult: any = { data: null }
+    let todayPackingResult: any = { data: null }
+    
+    try {
+        const [milkInvRes, packingRes] = await Promise.all([
+            supabase.from('milk_inventory').select('*').eq('inventory_date', todayStr).maybeSingle(),
+            supabase.from('packing_entries').select('*').eq('date', todayStr).maybeSingle()
+        ])
+        todayMilkInvResult = milkInvRes || { data: null }
+        todayPackingResult = packingRes || { data: null }
+    } catch (e) {
+        console.error('Error fetching live milk analytics:', e)
+    }
+
+    const todaysSales = salesData?.data?.reduce((sum: number, sale: any) => sum + parseFloat(sale.sale_total || '0'), 0) || 0
+    const totalItems = itemsData?.count || 0
+    const totalCustomers = customersData?.count || 0
+    const lowStockCount = lowStockData?.data?.filter((item: any) => {
         const totalStock = (item.inventory as Array<{ quantity: number }>)?.reduce((sum: number, inv: any) => sum + inv.quantity, 0) || 0
         return totalStock <= (item.reorder_level || 0)
     }).length || 0
-    const expiringItems = expiringData.data || []
+    const expiringItems = expiringData?.data || []
 
-    const milkReceived = parseFloat(todayMilkInvResult.data?.total_received || '0')
-    const milkUsedPacking = parseFloat(todayPackingResult.data?.total_milk_used || '0')
-    const milkSoldPos = parseFloat(todayMilkInvResult.data?.total_pos_sold || '0')
-    const milkDeliveredRiders = parseFloat(todayMilkInvResult.data?.total_rider_deliveries || '0')
+    const milkReceived = parseFloat(todayMilkInvResult?.data?.total_received || '0')
+    const milkUsedPacking = parseFloat(todayPackingResult?.data?.total_milk_used || '0')
+    const milkSoldPos = parseFloat(todayMilkInvResult?.data?.total_pos_sold || '0')
+    const milkDeliveredRiders = parseFloat(todayMilkInvResult?.data?.total_rider_deliveries || '0')
     const milkRemaining = milkReceived - milkUsedPacking - milkSoldPos - milkDeliveredRiders
 
     const { data: recentSales } = await supabase
