@@ -16,18 +16,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect('/login')
     }
 
-    // Get employee record
-    const { data: employee } = await supabase
-        .from('employees')
-        .select('id, role_id')
-        .eq('user_id', user.id)
-        .eq('deleted', false)
-        .single()
+    let roleName = 'Cashier'
+    let permissions: string[] = []
 
-    // Fetch role and permissions (fallback to Cashier if not set)
-    const { roleName, permissions } = employee 
-        ? await getUserRole(user.id)
-        : { roleName: 'Cashier' as any, permissions: [] }
+    try {
+        // Get employee record
+        const { data: employee } = await supabase
+            .from('employees')
+            .select('id, role_id')
+            .eq('user_id', user.id)
+            .eq('deleted', false)
+            .single()
+
+        if (employee) {
+            const roleData = await getUserRole(user.id)
+            roleName = roleData.roleName
+            permissions = roleData.permissions
+        }
+    } catch (e) {
+        console.error('Error fetching employee role:', e)
+    }
 
     return (
         <ToastProvider>

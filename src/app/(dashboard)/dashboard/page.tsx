@@ -23,21 +23,36 @@ export default async function DashboardPage() {
 
     const todayStr = new Date(new Date().getTime() + 5 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // Original core dashboard queries
-    const [salesData, itemsData, customersData, lowStockData, expiringData] = await Promise.all([
-        supabase.from('sales').select('sale_total')
-            .gte('sale_time', today.toISOString()).lt('sale_time', tomorrow.toISOString()),
-        supabase.from('items').select('id', { count: 'exact' }).eq('deleted', false),
-        supabase.from('customers').select('id', { count: 'exact' }).eq('deleted', false),
-        supabase.from('items').select('id, reorder_level, inventory(quantity)').eq('deleted', false),
-        supabase.from('items')
-            .select('id, name, expiry_date, batch_number')
-            .eq('deleted', false)
-            .lte('expiry_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
-            .gte('expiry_date', new Date().toISOString())
-            .order('expiry_date')
-            .limit(5)
-    ])
+    // Original core dashboard queries with safe defaults
+    let salesData: any = { data: [] }
+    let itemsData: any = { count: 0 }
+    let customersData: any = { count: 0 }
+    let lowStockData: any = { data: [] }
+    let expiringData: any = { data: [] }
+
+    try {
+        const [salesRes, itemsRes, customersRes, lowStockRes, expiringRes] = await Promise.all([
+            supabase.from('sales').select('sale_total')
+                .gte('sale_time', today.toISOString()).lt('sale_time', tomorrow.toISOString()),
+            supabase.from('items').select('id', { count: 'exact' }).eq('deleted', false),
+            supabase.from('customers').select('id', { count: 'exact' }).eq('deleted', false),
+            supabase.from('items').select('id, reorder_level, inventory(quantity)').eq('deleted', false),
+            supabase.from('items')
+                .select('id, name, expiry_date, batch_number')
+                .eq('deleted', false)
+                .lte('expiry_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
+                .gte('expiry_date', new Date().toISOString())
+                .order('expiry_date')
+                .limit(5)
+        ])
+        salesData = salesRes || { data: [] }
+        itemsData = itemsRes || { count: 0 }
+        customersData = customersRes || { count: 0 }
+        lowStockData = lowStockRes || { data: [] }
+        expiringData = expiringRes || { data: [] }
+    } catch (e) {
+        console.error('Error fetching core dashboard analytics:', e)
+    }
 
     // Gracefully isolated milk lifecycle queries to prevent layout crashes
     let todayMilkInvResult: any = { data: null }
@@ -69,11 +84,18 @@ export default async function DashboardPage() {
     const milkDeliveredRiders = parseFloat(todayMilkInvResult?.data?.total_rider_deliveries || '0')
     const milkRemaining = milkReceived - milkUsedPacking - milkSoldPos - milkDeliveredRiders
 
-    const { data: recentSales } = await supabase
-        .from('sales')
-        .select('id, sale_total, sale_time, customer:customers(person:people(first_name, last_name))')
-        .order('sale_time', { ascending: false })
-        .limit(5)
+    // Safe fetch for recent sales to prevent layout crash
+    let recentSales: any[] = []
+    try {
+        const { data: salesList } = await supabase
+            .from('sales')
+            .select('id, sale_total, sale_time, customer:customers(person:people(first_name, last_name))')
+            .order('sale_time', { ascending: false })
+            .limit(5)
+        recentSales = salesList || []
+    } catch (e) {
+        console.error('Error fetching recent sales:', e)
+    }
 
     const stats = [
         {
