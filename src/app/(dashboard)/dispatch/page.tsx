@@ -20,20 +20,31 @@ export default function DispatchPage() {
     const [dispatches, setDispatches] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
-    const [showAddDialog, setShowAddDialog] = useState(false)
     const [riders, setRiders] = useState<any[]>([])
     const [items, setItems] = useState<any[]>([])
-    const [form, setForm] = useState({
+    const [saving, setSaving] = useState(false)
+
+    // Dispatch dialog
+    const [showDispatchDialog, setShowDispatchDialog] = useState(false)
+    const [dispatchForm, setDispatchForm] = useState({
         rider_id: '',
         item_id: '',
         supplied_quantity: '',
-        returned_quantity: '0',
         picked_milk_packets: '0',
         picked_yogurt_packets: '0',
-        dropped_milk_packets: '0',
-        dropped_yogurt_packets: '0'
     })
-    const [saving, setSaving] = useState(false)
+
+    // Returns dialog
+    const [showReturnsDialog, setShowReturnsDialog] = useState(false)
+    const [returnsForm, setReturnsForm] = useState({
+        rider_id: '',
+        item_id: '',
+        returned_quantity: '',
+        dropped_milk_packets: '0',
+        dropped_yogurt_packets: '0',
+    })
+
+    // Edit return dialog (per-row)
     const [showReturnDialog, setShowReturnDialog] = useState(false)
     const [editingDispatch, setEditingDispatch] = useState<any>(null)
     const [returnQty, setReturnQty] = useState('')
@@ -51,48 +62,65 @@ export default function DispatchPage() {
 
     useEffect(() => { loadDispatches() }, [loadDispatches])
 
-    const openAddDialog = async () => {
+    const loadRidersAndItems = async () => {
         const [r, i] = await Promise.all([getRidersForDispatch(), getItemsForDispatch()])
         setRiders(r); setItems(i)
-        setForm({
-            rider_id: '',
-            item_id: '',
-            supplied_quantity: '',
-            returned_quantity: '0',
-            picked_milk_packets: '0',
-            picked_yogurt_packets: '0',
-            dropped_milk_packets: '0',
-            dropped_yogurt_packets: '0'
-        })
-        setShowAddDialog(true)
+    }
+
+    // Dispatch
+    const openDispatchDialog = async () => {
+        await loadRidersAndItems()
+        setDispatchForm({ rider_id: '', item_id: '', supplied_quantity: '', picked_milk_packets: '0', picked_yogurt_packets: '0' })
+        setShowDispatchDialog(true)
     }
 
     const handleSaveDispatch = async () => {
-        if (!form.rider_id || !form.item_id || !form.supplied_quantity) return showToast('error', 'Please fill all required fields')
-        const supplied = parseFloat(form.supplied_quantity), returned = parseFloat(form.returned_quantity) || 0
+        if (!dispatchForm.rider_id || !dispatchForm.item_id || !dispatchForm.supplied_quantity) return showToast('error', 'Please fill all required fields')
+        const supplied = parseFloat(dispatchForm.supplied_quantity)
         if (supplied <= 0) return showToast('error', 'Supplied quantity must be positive')
-        if (returned < 0 || returned > supplied) return showToast('error', 'Return cannot exceed supplied')
-        
-        const pickedMilk = parseInt(form.picked_milk_packets) || 0
-        const pickedYogurt = parseInt(form.picked_yogurt_packets) || 0
-        const droppedMilk = parseInt(form.dropped_milk_packets) || 0
-        const droppedYogurt = parseInt(form.dropped_yogurt_packets) || 0
-
         setSaving(true)
         try {
             await upsertDispatch({
-                rider_id: +form.rider_id,
-                item_id: +form.item_id,
+                rider_id: +dispatchForm.rider_id,
+                item_id: +dispatchForm.item_id,
                 dispatch_date: selectedDate,
                 supplied_quantity: supplied,
-                returned_quantity: returned,
-                picked_milk_packets: pickedMilk,
-                dropped_milk_packets: droppedMilk,
-                picked_yogurt_packets: pickedYogurt,
-                dropped_yogurt_packets: droppedYogurt
+                returned_quantity: 0,
+                picked_milk_packets: parseInt(dispatchForm.picked_milk_packets) || 0,
+                picked_yogurt_packets: parseInt(dispatchForm.picked_yogurt_packets) || 0,
+                dropped_milk_packets: 0,
+                dropped_yogurt_packets: 0
             })
-            showToast('success', 'Dispatch record saved'); setShowAddDialog(false); loadDispatches()
+            showToast('success', 'Dispatch saved'); setShowDispatchDialog(false); loadDispatches()
         } catch { showToast('error', 'Failed to save dispatch') } finally { setSaving(false) }
+    }
+
+    // Returns
+    const openReturnsDialog = async () => {
+        await loadRidersAndItems()
+        setReturnsForm({ rider_id: '', item_id: '', returned_quantity: '', dropped_milk_packets: '0', dropped_yogurt_packets: '0' })
+        setShowReturnsDialog(true)
+    }
+
+    const handleSaveReturns = async () => {
+        if (!returnsForm.rider_id || !returnsForm.item_id || !returnsForm.returned_quantity) return showToast('error', 'Please fill all required fields')
+        const returned = parseFloat(returnsForm.returned_quantity)
+        if (returned <= 0) return showToast('error', 'Returned quantity must be positive')
+        setSaving(true)
+        try {
+            await upsertDispatch({
+                rider_id: +returnsForm.rider_id,
+                item_id: +returnsForm.item_id,
+                dispatch_date: selectedDate,
+                supplied_quantity: 0,
+                returned_quantity: returned,
+                picked_milk_packets: 0,
+                picked_yogurt_packets: 0,
+                dropped_milk_packets: parseInt(returnsForm.dropped_milk_packets) || 0,
+                dropped_yogurt_packets: parseInt(returnsForm.dropped_yogurt_packets) || 0
+            })
+            showToast('success', 'Return recorded'); setShowReturnsDialog(false); loadDispatches()
+        } catch { showToast('error', 'Failed to record return') } finally { setSaving(false) }
     }
 
     const handleUpdateReturn = async () => {
@@ -126,7 +154,10 @@ export default function DispatchPage() {
                     <h1 className="text-3xl font-bold">Rider Dispatch & Returns</h1>
                     <p className="text-gray-500 mt-1">Track daily stock dispatched to riders and returned quantities</p>
                 </div>
-                <Button onClick={openAddDialog} className="bg-purple-600 hover:bg-purple-700"><Plus className="h-4 w-4 mr-2" />Add Record</Button>
+                <div className="flex gap-2">
+                    <Button onClick={openReturnsDialog} variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50"><RotateCcw className="h-4 w-4 mr-2" />Record Returns</Button>
+                    <Button onClick={openDispatchDialog} className="bg-purple-600 hover:bg-purple-700"><Plus className="h-4 w-4 mr-2" />New Dispatch</Button>
+                </div>
             </div>
 
             <Card><CardContent className="pt-4 pb-4">
@@ -177,7 +208,7 @@ export default function DispatchPage() {
                         <div className="text-center py-12">
                             <ArrowLeftRight className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                             <p className="text-gray-500">No dispatch records for this date</p>
-                            <Button onClick={openAddDialog} className="mt-4 bg-purple-600 hover:bg-purple-700"><Plus className="h-4 w-4 mr-2" />Add First Record</Button>
+                            <Button onClick={openDispatchDialog} className="mt-4 bg-purple-600 hover:bg-purple-700"><Plus className="h-4 w-4 mr-2" />New Dispatch</Button>
                         </div>
                     ) : (
                         <Table>
@@ -258,44 +289,72 @@ export default function DispatchPage() {
                 </CardContent>
             </Card>
 
-            {/* Add Dialog */}
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            {/* Dispatch Dialog */}
+            <Dialog open={showDispatchDialog} onOpenChange={setShowDispatchDialog}>
                 <DialogContent className="sm:max-w-md">
-                    <DialogHeader><DialogTitle>Add Dispatch Record</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>New Dispatch</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-2">
                         <div><Label>Rider *</Label>
-                            <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={form.rider_id} onChange={e => setForm(f => ({ ...f, rider_id: e.target.value }))}>
+                            <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={dispatchForm.rider_id} onChange={e => setDispatchForm(f => ({ ...f, rider_id: e.target.value }))}>
                                 <option value="">— Select rider —</option>
                                 {riders.map(r => <option key={r.id} value={r.id}>{r.person?.first_name} {r.person?.last_name}{r.username ? ` (@${r.username})` : ''}</option>)}
                             </select></div>
                         <div><Label>Product *</Label>
-                            <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={form.item_id} onChange={e => setForm(f => ({ ...f, item_id: e.target.value }))}>
+                            <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={dispatchForm.item_id} onChange={e => setDispatchForm(f => ({ ...f, item_id: e.target.value }))}>
                                 <option value="">— Select product —</option>
                                 {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit_type || 'unit'})</option>)}
                             </select></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><Label htmlFor="supplied">Supplied Qty (L/KG) *</Label><Input id="supplied" type="number" min="0" step="0.5" value={form.supplied_quantity} onChange={e => setForm(f => ({ ...f, supplied_quantity: e.target.value }))} className="mt-1" /></div>
-                            <div><Label htmlFor="returned">Returned Qty (L/KG)</Label><Input id="returned" type="number" min="0" step="0.5" value={form.returned_quantity} onChange={e => setForm(f => ({ ...f, returned_quantity: e.target.value }))} className="mt-1" /></div>
-                        </div>
+                        <div><Label htmlFor="supplied">Supplied Qty (L/KG) *</Label><Input id="supplied" type="number" min="0" step="0.5" value={dispatchForm.supplied_quantity} onChange={e => setDispatchForm(f => ({ ...f, supplied_quantity: e.target.value }))} className="mt-1" /></div>
                         <div className="grid grid-cols-2 gap-4 border-t pt-3">
-                            <div><Label htmlFor="picked_milk">Picked Milk Packets</Label><Input id="picked_milk" type="number" min="0" value={form.picked_milk_packets} onChange={e => setForm(f => ({ ...f, picked_milk_packets: e.target.value }))} className="mt-1" /></div>
-                            <div><Label htmlFor="dropped_milk">Dropped Milk Packets</Label><Input id="dropped_milk" type="number" min="0" value={form.dropped_milk_packets} onChange={e => setForm(f => ({ ...f, dropped_milk_packets: e.target.value }))} className="mt-1" /></div>
+                            <div><Label htmlFor="picked_milk">Picked Milk Packets</Label><Input id="picked_milk" type="number" min="0" value={dispatchForm.picked_milk_packets} onChange={e => setDispatchForm(f => ({ ...f, picked_milk_packets: e.target.value }))} className="mt-1" /></div>
+                            <div><Label htmlFor="picked_yogurt">Picked Yogurt Packets</Label><Input id="picked_yogurt" type="number" min="0" value={dispatchForm.picked_yogurt_packets} onChange={e => setDispatchForm(f => ({ ...f, picked_yogurt_packets: e.target.value }))} className="mt-1" /></div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 border-t pt-3">
-                            <div><Label htmlFor="picked_yogurt">Picked Yogurt Packets</Label><Input id="picked_yogurt" type="number" min="0" value={form.picked_yogurt_packets} onChange={e => setForm(f => ({ ...f, picked_yogurt_packets: e.target.value }))} className="mt-1" /></div>
-                            <div><Label htmlFor="dropped_yogurt">Dropped Yogurt Packets</Label><Input id="dropped_yogurt" type="number" min="0" value={form.dropped_yogurt_packets} onChange={e => setForm(f => ({ ...f, dropped_yogurt_packets: e.target.value }))} className="mt-1" /></div>
-                        </div>
-                        {form.supplied_quantity && (
-                            <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 space-y-1 dark:bg-blue-950/30 dark:text-blue-300">
-                                <div>Net delivered Qty: <strong>{(parseFloat(form.supplied_quantity) - parseFloat(form.returned_quantity || '0')).toFixed(1)}</strong> L/KG</div>
-                                <div>Net delivered Milk Packets: <strong>{parseInt(form.picked_milk_packets || '0') - parseInt(form.dropped_milk_packets || '0')}</strong></div>
-                                <div>Net delivered Yogurt Packets: <strong>{parseInt(form.picked_yogurt_packets || '0') - parseInt(form.dropped_yogurt_packets || '0')}</strong></div>
+                        {dispatchForm.supplied_quantity && (
+                            <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                                <div>Net delivered Qty: <strong>{parseFloat(dispatchForm.supplied_quantity).toFixed(1)}</strong> L/KG</div>
+                                <div>Net Milk Packets: <strong>{parseInt(dispatchForm.picked_milk_packets || '0')}</strong></div>
+                                <div>Net Yogurt Packets: <strong>{parseInt(dispatchForm.picked_yogurt_packets || '0')}</strong></div>
                             </div>
                         )}
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
-                        <Button onClick={handleSaveDispatch} disabled={saving} className="bg-purple-600 hover:bg-purple-700">{saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}{saving ? 'Saving...' : 'Save Record'}</Button>
+                        <Button variant="outline" onClick={() => setShowDispatchDialog(false)}>Cancel</Button>
+                        <Button onClick={handleSaveDispatch} disabled={saving} className="bg-purple-600 hover:bg-purple-700">{saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}{saving ? 'Saving...' : 'Save Dispatch'}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Returns Dialog */}
+            <Dialog open={showReturnsDialog} onOpenChange={setShowReturnsDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader><DialogTitle>Record Returns</DialogTitle></DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div><Label>Rider *</Label>
+                            <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={returnsForm.rider_id} onChange={e => setReturnsForm(f => ({ ...f, rider_id: e.target.value }))}>
+                                <option value="">— Select rider —</option>
+                                {riders.map(r => <option key={r.id} value={r.id}>{r.person?.first_name} {r.person?.last_name}{r.username ? ` (@${r.username})` : ''}</option>)}
+                            </select></div>
+                        <div><Label>Product *</Label>
+                            <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={returnsForm.item_id} onChange={e => setReturnsForm(f => ({ ...f, item_id: e.target.value }))}>
+                                <option value="">— Select product —</option>
+                                {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit_type || 'unit'})</option>)}
+                            </select></div>
+                        <div><Label htmlFor="returned">Returned Qty (L/KG) *</Label><Input id="returned" type="number" min="0" step="0.5" value={returnsForm.returned_quantity} onChange={e => setReturnsForm(f => ({ ...f, returned_quantity: e.target.value }))} className="mt-1" /></div>
+                        <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                            <div><Label htmlFor="dropped_milk">Dropped Milk Packets</Label><Input id="dropped_milk" type="number" min="0" value={returnsForm.dropped_milk_packets} onChange={e => setReturnsForm(f => ({ ...f, dropped_milk_packets: e.target.value }))} className="mt-1" /></div>
+                            <div><Label htmlFor="dropped_yogurt">Dropped Yogurt Packets</Label><Input id="dropped_yogurt" type="number" min="0" value={returnsForm.dropped_yogurt_packets} onChange={e => setReturnsForm(f => ({ ...f, dropped_yogurt_packets: e.target.value }))} className="mt-1" /></div>
+                        </div>
+                        {returnsForm.returned_quantity && (
+                            <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                                <div>Returned Qty: <strong>{parseFloat(returnsForm.returned_quantity).toFixed(1)}</strong> L/KG</div>
+                                <div>Dropped Milk Packets: <strong>{parseInt(returnsForm.dropped_milk_packets || '0')}</strong></div>
+                                <div>Dropped Yogurt Packets: <strong>{parseInt(returnsForm.dropped_yogurt_packets || '0')}</strong></div>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowReturnsDialog(false)}>Cancel</Button>
+                        <Button onClick={handleSaveReturns} disabled={saving} className="bg-amber-600 hover:bg-amber-700">{saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}{saving ? 'Saving...' : 'Save Returns'}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
