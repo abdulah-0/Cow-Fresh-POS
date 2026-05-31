@@ -23,7 +23,8 @@ export async function getZones(): Promise<Zone[]> {
                 ),
                 customers(
                     id,
-                    person:people(first_name, last_name, phone_number)
+                    person:people(first_name, last_name, phone_number),
+                    delivery_address, latitude, longitude
                 )
             `)
             .eq('deleted', false)

@@ -24,6 +24,12 @@ import {
     getUnzonedCustomers, getRiders,
 } from '@/lib/services/zoneService'
 import type { Zone } from '@/types'
+import dynamic from 'next/dynamic'
+
+const LocationPicker = dynamic(
+    () => import('@/components/features/delivery/LocationPicker'),
+    { ssr: false, loading: () => <div className="h-[250px] rounded-xl bg-gray-50 flex items-center justify-center text-sm text-gray-400">Loading map...</div> }
+)
 
 export default function ZonesPage() {
     const [zones, setZones] = useState<Zone[]>([])
@@ -44,6 +50,8 @@ export default function ZonesPage() {
     const [unzonedCustomers, setUnzonedCustomers] = useState<any[]>([])
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
     const [customerAddress, setCustomerAddress] = useState('')
+    const [customerLat, setCustomerLat] = useState<number | undefined>(undefined)
+    const [customerLng, setCustomerLng] = useState<number | undefined>(undefined)
     const [assigningCustomer, setAssigningCustomer] = useState(false)
 
     // Assign rider dialog
@@ -129,6 +137,8 @@ export default function ZonesPage() {
         setTargetZoneId(zoneId)
         setSelectedCustomerId(null)
         setCustomerAddress('')
+        setCustomerLat(undefined)
+        setCustomerLng(undefined)
         const data = await getUnzonedCustomers()
         setUnzonedCustomers(data)
         setShowAssignCustomer(true)
@@ -140,6 +150,8 @@ export default function ZonesPage() {
         try {
             await assignCustomerToZone(selectedCustomerId, targetZoneId, {
                 delivery_address: customerAddress.trim() || undefined,
+                latitude: customerLat,
+                longitude: customerLng,
             })
             showToast('success', 'Customer assigned to zone')
             setShowAssignCustomer(false)
@@ -452,6 +464,14 @@ export default function ZonesPage() {
                                 className="mt-1"
                             />
                         </div>
+                        <LocationPicker
+                            latitude={customerLat}
+                            longitude={customerLng}
+                            onLocationChange={(lat, lng) => {
+                                setCustomerLat(lat)
+                                setCustomerLng(lng)
+                            }}
+                        />
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowAssignCustomer(false)}>Cancel</Button>
