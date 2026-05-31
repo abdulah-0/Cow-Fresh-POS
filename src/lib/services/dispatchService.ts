@@ -122,6 +122,57 @@ export async function updateReturnedQuantity(
 }
 
 /**
+ * Find a dispatch record by rider + item + date, then update only the returned/dropped fields.
+ */
+export async function recordReturns(
+    riderId: number,
+    itemId: number,
+    dispatchDate: string,
+    returnedQuantity: number,
+    droppedMilkPackets: number = 0,
+    droppedYogurtPackets: number = 0
+): Promise<void> {
+    const supabase = createClient()
+    const { data: existing, error: findError } = await supabase
+        .from('rider_dispatch')
+        .select('id, supplied_quantity')
+        .eq('rider_id', riderId)
+        .eq('item_id', itemId)
+        .eq('dispatch_date', dispatchDate)
+        .maybeSingle()
+
+    if (findError) throw findError
+
+    if (existing) {
+        const { error } = await supabase
+            .from('rider_dispatch')
+            .update({
+                returned_quantity: returnedQuantity,
+                dropped_milk_packets: droppedMilkPackets,
+                dropped_yogurt_packets: droppedYogurtPackets,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id)
+
+        if (error) throw error
+    } else {
+        const { error } = await supabase
+            .from('rider_dispatch')
+            .insert({
+                rider_id: riderId,
+                item_id: itemId,
+                dispatch_date: dispatchDate,
+                supplied_quantity: 0,
+                returned_quantity: returnedQuantity,
+                dropped_milk_packets: droppedMilkPackets,
+                dropped_yogurt_packets: droppedYogurtPackets,
+            })
+
+        if (error) throw error
+    }
+}
+
+/**
  * Update returned quantity and packets for a dispatch record.
  */
 export async function updateReturnedQuantityAndPackets(

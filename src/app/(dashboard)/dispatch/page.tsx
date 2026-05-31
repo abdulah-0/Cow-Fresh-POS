@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
-import { getDispatchByDate, upsertDispatch, updateReturnedQuantity, updateReturnedQuantityAndPackets, getRidersForDispatch, getItemsForDispatch } from '@/lib/services/dispatchService'
+import { getDispatchByDate, upsertDispatch, updateReturnedQuantity, updateReturnedQuantityAndPackets, recordReturns, getRidersForDispatch, getItemsForDispatch } from '@/lib/services/dispatchService'
 
 function toLocalDate(d: Date) { return d.toISOString().split('T')[0] }
 
@@ -108,17 +108,14 @@ export default function DispatchPage() {
         if (returned <= 0) return showToast('error', 'Returned quantity must be positive')
         setSaving(true)
         try {
-            await upsertDispatch({
-                rider_id: +returnsForm.rider_id,
-                item_id: +returnsForm.item_id,
-                dispatch_date: selectedDate,
-                supplied_quantity: 0,
-                returned_quantity: returned,
-                picked_milk_packets: 0,
-                picked_yogurt_packets: 0,
-                dropped_milk_packets: parseInt(returnsForm.dropped_milk_packets) || 0,
-                dropped_yogurt_packets: parseInt(returnsForm.dropped_yogurt_packets) || 0
-            })
+            await recordReturns(
+                +returnsForm.rider_id,
+                +returnsForm.item_id,
+                selectedDate,
+                returned,
+                parseInt(returnsForm.dropped_milk_packets) || 0,
+                parseInt(returnsForm.dropped_yogurt_packets) || 0
+            )
             showToast('success', 'Return recorded'); setShowReturnsDialog(false); loadDispatches()
         } catch { showToast('error', 'Failed to record return') } finally { setSaving(false) }
     }
