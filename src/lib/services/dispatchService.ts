@@ -22,27 +22,24 @@ export async function upsertDispatch(input: DispatchInput): Promise<RiderDispatc
     try {
         const { data, error } = await supabase
             .from('rider_dispatch')
-            .upsert(
-                {
-                    rider_id: input.rider_id,
-                    item_id: input.item_id,
-                    dispatch_date: input.dispatch_date,
-                    supplied_quantity: input.supplied_quantity,
-                    returned_quantity: input.returned_quantity,
-                    picked_milk_packets: input.picked_milk_packets || 0,
-                    dropped_milk_packets: input.dropped_milk_packets || 0,
-                    picked_yogurt_packets: input.picked_yogurt_packets || 0,
-                    dropped_yogurt_packets: input.dropped_yogurt_packets || 0,
-                },
-                { onConflict: 'rider_id,item_id,dispatch_date', ignoreDuplicates: false }
-            )
+            .insert({
+                rider_id: input.rider_id,
+                item_id: input.item_id,
+                dispatch_date: input.dispatch_date,
+                supplied_quantity: input.supplied_quantity,
+                returned_quantity: input.returned_quantity,
+                picked_milk_packets: input.picked_milk_packets || 0,
+                dropped_milk_packets: input.dropped_milk_packets || 0,
+                picked_yogurt_packets: input.picked_yogurt_packets || 0,
+                dropped_yogurt_packets: input.dropped_yogurt_packets || 0,
+            })
             .select()
             .single()
 
         if (error) throw error
         return data as RiderDispatch
     } catch (error) {
-        console.error('Error upserting dispatch:', error)
+        console.error('Error saving dispatch:', error)
         throw error
     }
 }
