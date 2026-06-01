@@ -99,10 +99,14 @@ export default function DeliveryMap({ stops, route, completedStops, onStopClick 
                 popupAnchor: [0, -36],
             })
 
+            const mapsUrl = !isDepot
+                ? `https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lng}`
+                : null
+
             const marker = L.marker([stop.lat, stop.lng], { icon })
                 .addTo(map)
                 .bindPopup(`
-                    <div style="min-width:160px">
+                    <div style="min-width:180px">
                         <strong style="font-size:13px">${stop.name}</strong><br/>
                         ${stop.address ? `<span style="color:#555;font-size:11px">${stop.address}</span><br/>` : ''}
                         ${stop.phone ? `<span style="font-size:11px">📞 ${stop.phone}</span><br/>` : ''}
@@ -112,10 +116,17 @@ export default function DeliveryMap({ stops, route, completedStops, onStopClick 
                             background:${isDone ? '#dcfce7' : '#eff6ff'};
                             color:${isDone ? '#15803d' : '#1d4ed8'};
                         ">${isDone ? '✓ Delivered' : isDepot ? 'Depot' : 'Pending'}</span>
+                        ${mapsUrl ? `<br/><a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="
+                            display:inline-flex;align-items:center;gap:4px;margin-top:6px;
+                            padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;
+                            background:#4285F4;color:white;text-decoration:none;
+                        ">🗺️ Navigate with Google Maps</a>` : ''}
                     </div>
                 `)
 
-            marker.on('click', () => onStopClick(stop))
+            marker.on('click', (e) => {
+                if (!isDepot) onStopClick(stop)
+            })
             overlays.push(marker)
         })
 
