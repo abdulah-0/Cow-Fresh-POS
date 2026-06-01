@@ -62,8 +62,9 @@ export default function DeliveryRoutesPage() {
         try {
             const data = await getZones()
             setZones(data)
-        } catch {
-            showToast('error', 'Failed to load delivery zones')
+        } catch (e) {
+            console.error('Failed to load delivery zones:', e)
+            showToast('error', 'Failed to load delivery zones', 0)
         } finally {
             setLoadingZones(false)
         }
@@ -97,11 +98,13 @@ export default function DeliveryRoutesPage() {
         // Warn if customers have no coordinates
         const uncoordinated = customers.filter(c => !c.latitude || !c.longitude)
         if (uncoordinated.length > 0) {
-            showToast('error', `${uncoordinated.length} customer(s) have no coordinates — skipped from route`)
+            console.error(`${uncoordinated.length} customer(s) have no coordinates — skipped from route:`, uncoordinated.map(c => ({ id: c.id, name: `${c.person?.first_name || ''} ${c.person?.last_name || ''}`.trim() })))
+            showToast('error', `${uncoordinated.length} customer(s) have no coordinates — skipped from route`, 0)
         }
 
         if (customerStops.length === 0) {
-            showToast('error', 'No customers with coordinates in this zone. Please set customer coordinates first.')
+            console.error('No customers with coordinates in this zone')
+            showToast('error', 'No customers with coordinates in this zone. Please set customer coordinates first.', 0)
             setStops([DEPOT])
             routeCalcRef.current = false
             return
@@ -126,8 +129,9 @@ export default function DeliveryRoutesPage() {
             if (optimized) {
                 showToast('success', `Route calculated: ${optimized.totalDistanceKm} km · ~${optimized.totalDurationMin} min`)
             }
-        } catch {
-            showToast('error', 'Failed to calculate route')
+        } catch (e) {
+            console.error('Failed to calculate route:', e)
+            showToast('error', 'Failed to calculate route', 0)
         } finally {
             setCalculatingRoute(false)
             routeCalcRef.current = false
@@ -141,8 +145,9 @@ export default function DeliveryRoutesPage() {
             const optimized = await calculateOptimizedRoute(stops)
             setRoute(optimized)
             showToast('success', 'Route recalculated')
-        } catch {
-            showToast('error', 'Failed to recalculate route')
+        } catch (e) {
+            console.error('Failed to recalculate route:', e)
+            showToast('error', 'Failed to recalculate route', 0)
         } finally {
             setCalculatingRoute(false)
         }
