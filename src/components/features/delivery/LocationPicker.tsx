@@ -14,6 +14,8 @@ export default function LocationPicker({ latitude, longitude, onLocationChange }
     const mapRef = useRef<L.Map | null>(null)
     const markerRef = useRef<L.Marker | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+    const onLocationChangeRef = useRef(onLocationChange)
+    onLocationChangeRef.current = onLocationChange
     const [locating, setLocating] = useState(false)
     const [pinned, setPinned] = useState(false)
     const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
@@ -64,14 +66,14 @@ export default function LocationPicker({ latitude, longitude, onLocationChange }
             const pos = marker.getLatLng()
             setCoords({ lat: pos.lat, lng: pos.lng })
             setPinned(true)
-            onLocationChange(pos.lat, pos.lng)
+            onLocationChangeRef.current(pos.lat, pos.lng)
         })
 
         map.on('click', (e: L.LeafletMouseEvent) => {
             marker.setLatLng(e.latlng)
             setCoords({ lat: e.latlng.lat, lng: e.latlng.lng })
             setPinned(true)
-            onLocationChange(e.latlng.lat, e.latlng.lng)
+            onLocationChangeRef.current(e.latlng.lat, e.latlng.lng)
         })
 
         mapRef.current = map
@@ -96,7 +98,7 @@ export default function LocationPicker({ latitude, longitude, onLocationChange }
                 }
                 setCoords({ lat, lng })
                 setPinned(true)
-                onLocationChange(lat, lng)
+                onLocationChangeRef.current(lat, lng)
                 setLocating(false)
             },
             () => setLocating(false),
@@ -155,7 +157,7 @@ export default function LocationPicker({ latitude, longitude, onLocationChange }
                                 markerRef.current.setLatLng([lat, lng])
                                 setCoords({ lat, lng })
                                 setPinned(true)
-                                onLocationChange(lat, lng)
+                                onLocationChangeRef.current(lat, lng)
                             }
                         }}
                         className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
@@ -176,7 +178,7 @@ export default function LocationPicker({ latitude, longitude, onLocationChange }
                                 markerRef.current.setLatLng([lat, lng])
                                 setCoords({ lat, lng })
                                 setPinned(true)
-                                onLocationChange(lat, lng)
+                                onLocationChangeRef.current(lat, lng)
                             }
                         }}
                         className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
