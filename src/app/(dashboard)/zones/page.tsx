@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
     Plus, Search, Edit, Trash2, MapPin, Users, UserCheck,
     ChevronDown, ChevronUp, Bike, X, Check
@@ -50,8 +50,8 @@ export default function ZonesPage() {
     const [unzonedCustomers, setUnzonedCustomers] = useState<any[]>([])
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
     const [customerAddress, setCustomerAddress] = useState('')
-    const [customerLat, setCustomerLat] = useState<number | undefined>(undefined)
-    const [customerLng, setCustomerLng] = useState<number | undefined>(undefined)
+    const customerLatRef = useRef<number | undefined>(undefined)
+    const customerLngRef = useRef<number | undefined>(undefined)
     const [assigningCustomer, setAssigningCustomer] = useState(false)
 
     // Assign rider dialog
@@ -137,8 +137,8 @@ export default function ZonesPage() {
         setTargetZoneId(zoneId)
         setSelectedCustomerId(null)
         setCustomerAddress('')
-        setCustomerLat(undefined)
-        setCustomerLng(undefined)
+        customerLatRef.current = undefined
+        customerLngRef.current = undefined
         const data = await getUnzonedCustomers()
         setUnzonedCustomers(data)
         setShowAssignCustomer(true)
@@ -150,8 +150,8 @@ export default function ZonesPage() {
         try {
             await assignCustomerToZone(selectedCustomerId, targetZoneId, {
                 delivery_address: customerAddress.trim() || undefined,
-                latitude: customerLat,
-                longitude: customerLng,
+                latitude: customerLatRef.current,
+                longitude: customerLngRef.current,
             })
             showToast('success', 'Customer assigned to zone')
             setShowAssignCustomer(false)
@@ -465,11 +465,11 @@ export default function ZonesPage() {
                             />
                         </div>
                         <LocationPicker
-                            latitude={customerLat}
-                            longitude={customerLng}
+                            latitude={customerLatRef.current}
+                            longitude={customerLngRef.current}
                             onLocationChange={(lat, lng) => {
-                                setCustomerLat(lat)
-                                setCustomerLng(lng)
+                                customerLatRef.current = lat
+                                customerLngRef.current = lng
                             }}
                         />
                     </div>
