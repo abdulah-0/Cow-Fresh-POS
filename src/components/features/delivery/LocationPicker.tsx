@@ -139,6 +139,50 @@ export default function LocationPicker({ latitude, longitude, onLocationChange }
             {!coords && (
                 <p className="text-xs text-gray-400">Click on the map or use &quot;My Location&quot; to pin the customer&apos;s house</p>
             )}
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="text-xs text-gray-500">Latitude</label>
+                    <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 33.5362"
+                        value={coords?.lat ?? ''}
+                        onChange={e => {
+                            const lat = parseFloat(e.target.value)
+                            if (!isNaN(lat) && mapRef.current && markerRef.current) {
+                                const lng = coords?.lng ?? 73.0931
+                                mapRef.current.setView([lat, lng], 17)
+                                markerRef.current.setLatLng([lat, lng])
+                                setCoords({ lat, lng })
+                                setPinned(true)
+                                onLocationChange(lat, lng)
+                            }
+                        }}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
+                    />
+                </div>
+                <div>
+                    <label className="text-xs text-gray-500">Longitude</label>
+                    <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 73.0931"
+                        value={coords?.lng ?? ''}
+                        onChange={e => {
+                            const lng = parseFloat(e.target.value)
+                            if (!isNaN(lng) && mapRef.current && markerRef.current) {
+                                const lat = coords?.lat ?? 33.5362
+                                mapRef.current.setView([lat, lng], 17)
+                                markerRef.current.setLatLng([lat, lng])
+                                setCoords({ lat, lng })
+                                setPinned(true)
+                                onLocationChange(lat, lng)
+                            }
+                        }}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
+                    />
+                </div>
+            </div>
         </div>
     )
 }
