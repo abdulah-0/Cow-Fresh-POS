@@ -146,6 +146,11 @@ export default function ZonesPage() {
 
     const handleAssignCustomer = async () => {
         if (!selectedCustomerId || !targetZoneId) return
+        if (!customerLatRef.current || !customerLngRef.current) {
+            showToast('error', 'Please pin the customer location on the map first — click the map, drag the pin, use "My Location", or enter coordinates manually', 0)
+            return
+        }
+        console.log('Assigning customer with coordinates:', { lat: customerLatRef.current, lng: customerLngRef.current })
         setAssigningCustomer(true)
         try {
             await assignCustomerToZone(selectedCustomerId, targetZoneId, {
@@ -156,8 +161,9 @@ export default function ZonesPage() {
             showToast('success', 'Customer assigned to zone')
             setShowAssignCustomer(false)
             loadZones()
-        } catch {
-            showToast('error', 'Failed to assign customer')
+        } catch (e) {
+            console.error('Failed to assign customer:', e)
+            showToast('error', 'Failed to assign customer', 0)
         } finally {
             setAssigningCustomer(false)
         }
