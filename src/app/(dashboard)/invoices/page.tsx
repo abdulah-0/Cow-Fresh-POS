@@ -133,7 +133,32 @@ export default function InvoicesPage() {
         const phone = customer?.person?.phone_number?.replace(/\D/g, '')
         if (!phone) return showToast('error', 'No phone number for this customer')
 
-        showToast('info', 'WhatsApp Meta Cloud API migration in progress')
+        try {
+            const res = await fetch('/api/whatsapp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone,
+                    templateName: 'order_confirmed',
+                    invoiceId: invoice.id,
+                }),
+            })
+            const data = await res.json()
+
+            if (!data.configured) {
+                showToast('error', data.error || 'Meta WhatsApp Cloud API credentials not configured in .env', 0)
+                return
+            }
+
+            if (data.success) {
+                showToast('success', 'WhatsApp notification sent successfully via Meta Cloud API!')
+                loadInvoices()
+            } else {
+                showToast('error', `Notification failed: ${data.error}`, 0)
+            }
+        } catch (err: any) {
+            showToast('error', `Failed to send WhatsApp message: ${err.message || err}`, 0)
+        }
     }
 
 

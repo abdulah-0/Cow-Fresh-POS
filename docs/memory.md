@@ -154,4 +154,18 @@ WHATSAPP_BUSINESS_ACCOUNT_ID=your_meta_whatsapp_waba_id
   - Added live status badge on the delivery map: `Routing: Live (OpenRouteService)` vs `Routing: Estimated (Haversine Fallback)`.
   - Verified 0 TypeScript compilation errors (`npx tsc --noEmit` passed cleanly).
 
+### ✅ Part B: WhatsApp Integration Rebuild (Meta Cloud API) — COMPLETED
+- [x] **Phase 1 (Meta Credentials & Architecture):**
+  - Defined environment variables for Meta Cloud API (`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`).
+- [x] **Phase 2 (Server-side WhatsApp Service):**
+  - Built `src/lib/services/whatsappService.ts` with `sendWhatsAppTemplate` targeting `https://graph.facebook.com/v20.0/{phone-number-id}/messages`.
+  - Implemented graceful credentials detection (`configured: false`) when env vars are missing.
+- [x] **Phase 3 (API Route & Invoice Integration):**
+  - Built `POST /api/whatsapp/send` endpoint at `src/app/api/whatsapp/send/route.ts`.
+  - Connected `handleWhatsApp` in `src/app/(dashboard)/invoices/page.tsx` to the server-side Cloud API. Automatically updates `whatsapp_sent: true` in Supabase upon successful transmission.
+- [x] **Phase 4 (Failure Handling & Visibility):**
+  - Surfaced toast error alerts for missing credentials or failed Meta API template sends without blocking invoice operations.
+  - Verified 0 TypeScript compilation errors (`npx tsc --noEmit` passed cleanly).
+
+
 
