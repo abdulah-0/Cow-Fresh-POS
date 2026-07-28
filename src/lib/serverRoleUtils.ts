@@ -20,7 +20,7 @@ export async function getUserRole(userId: string): Promise<UserRole> {
         .eq('deleted', false)
         .single()
 
-    const role = employee?.roles as { name: string; permissions: string[] } | null
+    const role = (employee?.roles as unknown) as { name: string; permissions: string[] } | null
 
     return {
         roleName: role?.name ?? 'Cashier',

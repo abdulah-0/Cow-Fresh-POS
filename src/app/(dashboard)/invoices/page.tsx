@@ -133,21 +133,9 @@ export default function InvoicesPage() {
         const phone = customer?.person?.phone_number?.replace(/\D/g, '')
         if (!phone) return showToast('error', 'No phone number for this customer')
 
-        const name = `${customer.person.first_name} ${customer.person.last_name}`
-        const month = formatBillingMonth(invoice.billing_month)
-        const amount = Number(invoice.total_amount || 0).toLocaleString('en-PK')
-        const msg = encodeURIComponent(
-            `Assalamu Alaikum ${name},\n\nYour Cow Fresh Dairy invoice for *${month}* is ready.\n` +
-            `Deliveries: ${invoice.total_deliveries}\nTotal Amount: *Rs. ${amount}*\n\n` +
-            `Please arrange payment at your earliest convenience.\nJazakAllah Khair 🥛\n\n` +
-            `— Cow Fresh Dairy\n0331 0377703`
-        )
-        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank')
-        try {
-            await markInvoiceWhatsappSent(invoice.id)
-            loadInvoices()
-        } catch { /* non-critical */ }
+        showToast('info', 'WhatsApp Meta Cloud API migration in progress')
     }
+
 
     // Filtered + searched list
     const filtered = invoices.filter(inv => {

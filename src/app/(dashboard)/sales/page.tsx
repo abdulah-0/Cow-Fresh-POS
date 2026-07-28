@@ -106,6 +106,7 @@ export default function SalesPage() {
             item_location: item.item_quantities?.[0]?.location?.id || 1,
             in_stock: item.stock_quantity || 0,
             stock_name: item.location_name,
+            unit_type: item.unit_type || 'Piece',
         }
         addItem(cartItem)
         setSearchQuery('')
