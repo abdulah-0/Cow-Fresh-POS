@@ -8,7 +8,7 @@ import type { OptimizedRoute, RouteStop } from '@/lib/services/routeService'
 interface DeliveryMapProps {
     stops: RouteStop[]
     route: OptimizedRoute | null
-    completedStops: Set<number>
+    completedStops: Set<number | string>
     onStopClick: (stop: RouteStop) => void
 }
 
@@ -60,11 +60,12 @@ export default function DeliveryMap({ stops, route, completedStops, onStopClick 
         const overlays: L.Layer[] = []
 
         if (route && route.routeGeometry.length > 1) {
+            const isFallback = route.fallback
             const polyline = L.polyline(route.routeGeometry, {
-                color: '#6366f1',
+                color: isFallback ? '#f59e0b' : '#2563eb', // Amber for estimated, Blue for live ORS
                 weight: 4,
                 opacity: 0.85,
-                dashArray: undefined,
+                dashArray: isFallback ? '8, 8' : undefined, // Dashed line for estimated fallback
             }).addTo(map)
             overlays.push(polyline)
         }
@@ -124,7 +125,7 @@ export default function DeliveryMap({ stops, route, completedStops, onStopClick 
                     </div>
                 `)
 
-            marker.on('click', (e) => {
+            marker.on('click', () => {
                 if (!isDepot) onStopClick(stop)
             })
             overlays.push(marker)
@@ -142,10 +143,22 @@ export default function DeliveryMap({ stops, route, completedStops, onStopClick 
     }, [stops, route, completedStops, onStopClick])
 
     return (
-        <div
-            ref={containerRef}
-            className="w-full rounded-xl overflow-hidden border border-gray-200"
-            style={{ height: '480px' }}
-        />
+        <div className="relative w-full rounded-xl overflow-hidden border border-gray-200">
+            {/* Admin Routing Indicator Safeguard */}
+            <div className="absolute top-3 right-3 z-[1000] bg-white/95 backdrop-blur-sm border px-3 py-1.5 rounded-lg shadow-md flex items-center gap-2 text-xs font-semibold">
+                {route?.fallback ? (
+                    <>
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="text-amber-800">Routing: Estimated (Haversine Fallback)</span>
+                    </>
+                ) : (
+                    <>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span className="text-emerald-800">Routing: Live (OpenRouteService)</span>
+                    </>
+                )}
+            </div>
+            <div ref={containerRef} style={{ height: '480px' }} />
+        </div>
     )
 }

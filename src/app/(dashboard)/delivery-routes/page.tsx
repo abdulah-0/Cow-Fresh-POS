@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { getZones } from '@/lib/services/zoneService'
-import { calculateOptimizedRoute } from '@/lib/services/routeService'
+import { calculateOptimizedRoute, geocodeAddress } from '@/lib/services/routeService'
 import type { OptimizedRoute, RouteStop } from '@/lib/services/routeService'
 import type { Zone } from '@/types'
 
@@ -49,7 +49,7 @@ export default function DeliveryRoutesPage() {
     const [selectedZone, setSelectedZone] = useState<Zone | null>(null)
     const [stops, setStops] = useState<RouteStop[]>([])
     const [route, setRoute] = useState<OptimizedRoute | null>(null)
-    const [completedStops, setCompletedStops] = useState<Set<number>>(new Set())
+    const [completedStops, setCompletedStops] = useState<Set<number | string>>(new Set())
     const [loadingZones, setLoadingZones] = useState(true)
     const [calculatingRoute, setCalculatingRoute] = useState(false)
     const [noKeyWarning, setNoKeyWarning] = useState(false)
@@ -81,30 +81,42 @@ export default function DeliveryRoutesPage() {
         setCompletedStops(new Set())
         setRoute(null)
 
-        // Build stop list from zone customers
+        // Build stop list from zone customers, resolving coordinates if missing
         const customers = (zone.customers || []) as any[]
-        const customerStops: RouteStop[] = customers
-            .filter(c => c.latitude && c.longitude)
-            .map((c, idx) => ({
-                id: c.id,
-                name: `${c.person?.first_name || ''} ${c.person?.last_name || ''}`.trim() || `Customer ${idx + 1}`,
-                lat: c.latitude,
-                lng: c.longitude,
-                address: c.delivery_address || '',
-                phone: c.person?.phone_number || '',
-                type: 'customer' as const,
-            }))
+        const customerStops: RouteStop[] = []
 
-        // Warn if customers have no coordinates
-        const uncoordinated = customers.filter(c => !c.latitude || !c.longitude)
-        if (uncoordinated.length > 0) {
-            console.error(`${uncoordinated.length} customer(s) have no coordinates — skipped from route:`, uncoordinated.map(c => ({ id: c.id, name: `${c.person?.first_name || ''} ${c.person?.last_name || ''}`.trim() })))
-            showToast('error', `${uncoordinated.length} customer(s) have no coordinates — skipped from route`, 0)
+        for (let idx = 0; idx < customers.length; idx++) {
+            const c = customers[idx]
+            let lat = c.latitude != null ? Number(c.latitude) : null
+            let lng = c.longitude != null ? Number(c.longitude) : null
+
+            // Auto-resolve missing coordinates via server geocoding endpoint
+            if (lat == null || lng == null) {
+                const addr = c.delivery_address || [c.person?.address_1, c.person?.city, c.person?.state].filter(Boolean).join(', ')
+                if (addr) {
+                    const resolved = await geocodeAddress(addr, c.id)
+                    if (resolved) {
+                        lat = resolved.lat
+                        lng = resolved.lng
+                    }
+                }
+            }
+
+            if (lat != null && lng != null) {
+                customerStops.push({
+                    id: c.id,
+                    name: `${c.person?.first_name || ''} ${c.person?.last_name || ''}`.trim() || `Customer ${idx + 1}`,
+                    lat,
+                    lng,
+                    address: c.delivery_address || '',
+                    phone: c.person?.phone_number || '',
+                    type: 'customer' as const,
+                })
+            }
         }
 
         if (customerStops.length === 0) {
-            console.error('No customers with coordinates in this zone')
-            showToast('error', 'No customers with coordinates in this zone. Please set customer coordinates first.', 0)
+            showToast('error', 'No customer coordinates available for this zone.', 0)
             setStops([DEPOT])
             routeCalcRef.current = false
             return
@@ -113,21 +125,18 @@ export default function DeliveryRoutesPage() {
         const allStops = [DEPOT, ...customerStops]
         setStops(allStops)
 
-        // Check for ORS key
-        const orsKey = process.env.NEXT_PUBLIC_ORS_API_KEY
-        if (!orsKey || orsKey === 'your_openrouteservice_api_key_here') {
-            setNoKeyWarning(true)
-        } else {
-            setNoKeyWarning(false)
-        }
-
-        // Calculate optimized route
+        // Calculate optimized route via server route service
         setCalculatingRoute(true)
         try {
             const optimized = await calculateOptimizedRoute(allStops)
             setRoute(optimized)
             if (optimized) {
-                showToast('success', `Route calculated: ${optimized.totalDistanceKm} km · ~${optimized.totalDurationMin} min`)
+                setNoKeyWarning(optimized.fallback)
+                if (optimized.fallback) {
+                    showToast('info', `Estimated route (Haversine): ${optimized.totalDistanceKm} km · ~${optimized.totalDurationMin} min`)
+                } else {
+                    showToast('success', `Live route calculated: ${optimized.totalDistanceKm} km · ~${optimized.totalDurationMin} min`)
+                }
             }
         } catch (e) {
             console.error('Failed to calculate route:', e)

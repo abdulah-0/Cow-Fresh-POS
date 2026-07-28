@@ -140,3 +140,18 @@ WHATSAPP_BUSINESS_ACCOUNT_ID=your_meta_whatsapp_waba_id
   - Removed client-side `wa.me` browser redirect logic from `src/app/(dashboard)/invoices/page.tsx` and replaced with stubbed toast status for WhatsApp Cloud API integration.
   - Verified 0 TypeScript compilation errors (`npx tsc --noEmit` passed cleanly).
 
+### ✅ Part A: Maps & Route Optimization Rebuild — COMPLETED
+- [x] **Phase 1 (Server-side Geocoding Service):**
+  - Created `POST /api/geocoding/resolve` with 1 req/sec server-side rate-limiting and DB coordinate caching on `customers` table (`latitude`, `longitude`).
+  - Integrated auto-geocoding in `customersService.ts` on customer creation and address updates.
+- [x] **Phase 2 (Server-side Routing Service):**
+  - Created `POST /api/routes/optimize` consuming server-only `ORS_API_KEY`.
+  - Built automatic `fallback: true` Haversine straight-line estimation when key is missing or invalid.
+- [x] **Phase 3 (Map UI Rebuild):**
+  - Updated `DeliveryMap.tsx` and `routeService.ts` to route all map interactions through server API endpoints.
+  - Rendered solid blue polylines (`#2563eb`) for live ORS routes and dashed amber polylines (`#f59e0b`, `dashArray: '8, 8'`) for Haversine estimated fallbacks.
+- [x] **Phase 4 (Ops Safeguards):**
+  - Added live status badge on the delivery map: `Routing: Live (OpenRouteService)` vs `Routing: Estimated (Haversine Fallback)`.
+  - Verified 0 TypeScript compilation errors (`npx tsc --noEmit` passed cleanly).
+
+

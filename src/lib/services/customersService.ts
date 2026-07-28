@@ -70,6 +70,18 @@ export async function createCustomer(customer: CustomerInput): Promise<any> {
 
         if (customerError) throw customerError
 
+        // Trigger server-side geocoding in background/inline to populate lat/lng
+        try {
+            const addr = customer.delivery_address || customer.person.address_1
+            if (addr) {
+                await fetch('/api/geocoding/resolve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId: customerRecord.id, address: addr }),
+                })
+            }
+        } catch { /* non-critical geocoding fail */ }
+
         return { ...customerRecord, person }
     } catch (error) {
         console.error('Error creating customer:', error)
@@ -136,6 +148,20 @@ export async function updateCustomer(customerId: number, customer: Partial<Custo
             .single()
 
         if (error) throw error
+
+        // If address updated or missing lat/lng, trigger geocoding
+        try {
+            const addr = data.delivery_address || data.person?.address_1
+            const addressChanged = customer.delivery_address !== undefined || customer.person?.address_1 !== undefined
+            if (addr && (addressChanged || data.latitude == null || data.longitude == null)) {
+                await fetch('/api/geocoding/resolve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId, address: addr, forceRefresh: addressChanged }),
+                })
+            }
+        } catch { /* non-critical */ }
+
         return data
     } catch (error) {
         console.error('Error updating customer:', error)
