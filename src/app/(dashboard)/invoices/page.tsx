@@ -130,32 +130,36 @@ export default function InvoicesPage() {
 
     const handleWhatsApp = async (invoice: any) => {
         const customer = invoice.customer
-        const phone = customer?.person?.phone_number?.replace(/\D/g, '')
-        if (!phone) return showToast('error', 'No phone number for this customer')
+        const customerName = customer?.person
+            ? `${customer.person.first_name} ${customer.person.last_name}`
+            : 'Customer'
 
         try {
             const res = await fetch('/api/whatsapp/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    phone,
-                    templateName: 'order_confirmed',
-                    invoiceId: invoice.id,
+                    kind: 'payment_reminder',
+                    customerId: invoice.customer_id,
+                    payload: {
+                        invoice_id: invoice.id,
+                        balance: Number(invoice.total_amount || 0).toLocaleString('en-PK'),
+                        currency: 'PKR',
+                        customer_name: customerName,
+                        month: formatBillingMonth(invoice.billing_month),
+                    },
                 }),
             })
             const data = await res.json()
 
-            if (!data.configured) {
-                showToast('error', data.error || 'Meta WhatsApp Cloud API credentials not configured in .env', 0)
+            if (!res.ok || !data.success) {
+                showToast('error', data.error || data.skippedReason || 'Failed to send WhatsApp reminder', 0)
                 return
             }
 
-            if (data.success) {
-                showToast('success', 'WhatsApp notification sent successfully via Meta Cloud API!')
-                loadInvoices()
-            } else {
-                showToast('error', `Notification failed: ${data.error}`, 0)
-            }
+            await markInvoiceWhatsappSent(invoice.id)
+            showToast('success', 'WhatsApp reminder sent successfully!')
+            loadInvoices()
         } catch (err: any) {
             showToast('error', `Failed to send WhatsApp message: ${err.message || err}`, 0)
         }

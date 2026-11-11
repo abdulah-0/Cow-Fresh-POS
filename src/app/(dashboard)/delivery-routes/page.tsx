@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { getZones } from '@/lib/services/zoneService'
 import { calculateOptimizedRoute, geocodeAddress } from '@/lib/services/routeService'
+import { sendWhatsAppFromClient } from '@/lib/whatsapp/clientEnqueue'
 import type { OptimizedRoute, RouteStop } from '@/lib/services/routeService'
 import type { Zone } from '@/types'
 
@@ -162,8 +163,10 @@ export default function DeliveryRoutesPage() {
         }
     }, [selectedZone, stops, showToast])
 
-    const handleStopClick = useCallback((stop: RouteStop) => {
+    const handleStopClick = useCallback(async (stop: RouteStop) => {
         if (stop.type === 'depot') return
+        const isMarkingComplete = !completedStops.has(stop.id)
+
         setCompletedStops(prev => {
             const next = new Set(prev)
             if (next.has(stop.id)) {
@@ -175,7 +178,48 @@ export default function DeliveryRoutesPage() {
             }
             return next
         })
-    }, [showToast])
+
+        // If marking complete, send customer a WhatsApp delivery notification
+        if (isMarkingComplete) {
+            const riderPerson = (selectedZone?.rider as any)?.person
+            const riderName = riderPerson
+                ? `${riderPerson.first_name || ''} ${riderPerson.last_name || ''}`.trim()
+                : (selectedZone?.rider as any)?.username || 'Cow Fresh Delivery Rider'
+            const riderPhone = riderPerson?.phone_number || ''
+
+            const formattedTime = new Date().toLocaleString('en-PK', {
+                timeZone: 'Asia/Karachi',
+                dateStyle: 'medium',
+                timeStyle: 'short',
+            })
+
+            try {
+                const res = await sendWhatsAppFromClient({
+                    kind: 'delivery_update',
+                    customerId: typeof stop.id === 'number' ? stop.id : Number(stop.id) || undefined,
+                    toPhone: stop.phone,
+                    payload: {
+                        customer_name: stop.name,
+                        customer_phone: stop.phone,
+                        rider_name: riderName,
+                        rider_phone: riderPhone,
+                        delivery_time: formattedTime,
+                        delivery_address: stop.address,
+                    },
+                })
+
+                if (res.success) {
+                    showToast('success', `WhatsApp delivery confirmation sent to ${stop.name}`)
+                } else if (res.skippedReason === 'customer_not_opted_in') {
+                    // Customer opted out - silent skip
+                } else if (res.error) {
+                    console.warn('[WhatsApp Delivery Notice]', res.error)
+                }
+            } catch (err) {
+                console.warn('[WhatsApp Delivery Notice Failed]', err)
+            }
+        }
+    }, [completedStops, selectedZone, showToast])
 
     const customerStops = stops.filter(s => s.type === 'customer')
     const completedCount = completedStops.size

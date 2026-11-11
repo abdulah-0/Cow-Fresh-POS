@@ -21,6 +21,8 @@ export interface CustomerInput {
     discount_percent?: number
     zone_id?: number
     delivery_address?: string
+    whatsapp_phone?: string
+    whatsapp_opt_in?: boolean
 }
 
 /**
@@ -63,6 +65,9 @@ export async function createCustomer(customer: CustomerInput): Promise<any> {
                 discount_percent: customer.discount_percent || 0,
                 zone_id: customer.zone_id,
                 delivery_address: customer.delivery_address || customer.person.address_1,
+                whatsapp_phone: customer.whatsapp_phone || customer.person.phone_number,
+                whatsapp_opt_in: Boolean(customer.whatsapp_opt_in),
+                whatsapp_opt_in_at: customer.whatsapp_opt_in ? new Date().toISOString() : null,
                 deleted: false,
             })
             .select()
@@ -138,6 +143,11 @@ export async function updateCustomer(customerId: number, customer: Partial<Custo
                 discount_percent: customer.discount_percent,
                 zone_id: customer.zone_id,
                 delivery_address: customer.delivery_address || customer.person?.address_1,
+                ...(customer.whatsapp_phone !== undefined && { whatsapp_phone: customer.whatsapp_phone }),
+                ...(customer.whatsapp_opt_in !== undefined && {
+                    whatsapp_opt_in: customer.whatsapp_opt_in,
+                    whatsapp_opt_in_at: customer.whatsapp_opt_in ? new Date().toISOString() : null,
+                }),
             })
             .eq('id', customerId)
             .select(`

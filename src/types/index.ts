@@ -56,6 +56,9 @@ export interface Customer {
     deleted: boolean
     person?: Person
     zone?: Zone
+    whatsapp_phone?: string
+    whatsapp_opt_in?: boolean
+    whatsapp_opt_in_at?: string
     created_at: string
     updated_at: string
 }
@@ -384,4 +387,16 @@ export interface PackingProduct {
     quantity_produced: number
     product?: Item
 }
+
+// ============================================================================
+// WHATSAPP INTEGRATION TYPES (GREEN API CLOUD)
+// ============================================================================
+
+export type {
+    WhatsAppMessageKind,
+    WhatsAppSendInput,
+    WhatsAppSendResult,
+    DeliveryNotificationData,
+} from '@/lib/whatsapp/types'
+
 

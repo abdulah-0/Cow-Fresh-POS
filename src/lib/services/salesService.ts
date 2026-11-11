@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { Cart, Sale, Payment, DiscountType } from '@/types'
 import { ensureUniqueInvoiceNumber } from '@/lib/invoiceUtils'
+import { enqueueWhatsAppFromClient } from '@/lib/whatsapp/clientEnqueue'
 
 /**
  * Complete a sale transaction
@@ -149,6 +150,30 @@ export async function completeSale(
                 employee_id: employeeId,
                 comment: `Sale #${invoiceNumber}`,
             })
+        }
+
+        // Send WhatsApp digital receipt if customer is attached
+        if (cart.customer?.id) {
+            try {
+                const itemsSummary = cart.items
+                    .map(i => `${i.quantity}x ${i.name || 'Item'}`)
+                    .slice(0, 3)
+                    .join(', ') + (cart.items.length > 3 ? ` +${cart.items.length - 3} more` : '')
+
+                await enqueueWhatsAppFromClient({
+                    kind: 'receipt',
+                    customerId: cart.customer.id,
+                    payload: {
+                        order_number: invoiceNumber,
+                        total: total.toLocaleString('en-PK'),
+                        currency: 'PKR',
+                        items_summary: itemsSummary,
+                    },
+                })
+            } catch (waErr) {
+                // Guaranteed safety - sale completion must never fail because of messaging
+                console.warn('[SalesService] Safe notice - WhatsApp send skipped:', waErr)
+            }
         }
 
         return sale as Sale

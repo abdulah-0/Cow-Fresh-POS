@@ -12,12 +12,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { createCustomer, updateCustomer, CustomerInput } from '@/lib/services/customersService'
-import { getZones } from '@/lib/services/zoneService'
-import type { Zone } from '@/types'
+import { ZoneSelector } from './ZoneSelector'
+import { CustomerWhatsAppSection } from './CustomerWhatsAppSection'
 
 interface CustomerFormDialogProps {
     open: boolean
@@ -34,12 +33,15 @@ export default function CustomerFormDialog({
 }: CustomerFormDialogProps) {
     const [loading, setLoading] = useState(false)
     const { showToast } = useToast()
-    const [zones, setZones] = useState<Zone[]>([])
-    const [zoneSearch, setZoneSearch] = useState('')
-    const [showZoneDropdown, setShowZoneDropdown] = useState(false)
-    const [selectedZone, setSelectedZone] = useState<Zone | null>(null)
 
-    const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<CustomerInput>({
+    const {
+        register,
+        handleSubmit,
+        reset,
+        setValue,
+        watch,
+        formState: { errors },
+    } = useForm<CustomerInput>({
         defaultValues: {
             person: {
                 first_name: '',
@@ -53,61 +55,32 @@ export default function CustomerFormDialog({
             discount_percent: 0,
             zone_id: undefined,
             delivery_address: '',
+            whatsapp_phone: '',
+            whatsapp_opt_in: false,
         },
     })
 
-    useEffect(() => {
-        async function loadZones() {
-            try {
-                const data = await getZones()
-                setZones(data)
-            } catch (error) {
-                console.error('Failed to load zones:', error)
-            }
-        }
-        loadZones()
-    }, [])
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (!target.closest('.zone-selector-container')) {
-                setShowZoneDropdown(false)
-                if (selectedZone) {
-                    setZoneSearch(selectedZone.zone_name)
-                } else {
-                    setZoneSearch('')
-                }
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [selectedZone])
+    const selectedZoneId = watch('zone_id')
 
     useEffect(() => {
         if (customer) {
-            const custZone = zones.find(z => z.id === customer.zone_id)
-            setSelectedZone(custZone || null)
-            setZoneSearch(custZone ? custZone.zone_name : '')
-
             reset({
                 person: {
-                    first_name: customer.person.first_name,
-                    last_name: customer.person.last_name,
-                    phone_number: customer.person.phone_number || '',
-                    address_1: customer.person.address_1 || '',
-                    city: customer.person.city || '',
-                    comments: customer.person.comments || '',
+                    first_name: customer.person?.first_name || '',
+                    last_name: customer.person?.last_name || '',
+                    phone_number: customer.person?.phone_number || '',
+                    address_1: customer.person?.address_1 || '',
+                    city: customer.person?.city || '',
+                    comments: customer.person?.comments || '',
                 },
                 company_name: customer.company_name || '',
                 discount_percent: customer.discount_percent || 0,
                 zone_id: customer.zone_id || undefined,
                 delivery_address: customer.delivery_address || customer.person?.address_1 || '',
+                whatsapp_phone: customer.whatsapp_phone || customer.person?.phone_number || '',
+                whatsapp_opt_in: Boolean(customer.whatsapp_opt_in),
             })
         } else {
-            setSelectedZone(null)
-            setZoneSearch('')
-
             reset({
                 person: {
                     first_name: '',
@@ -121,16 +94,18 @@ export default function CustomerFormDialog({
                 discount_percent: 0,
                 zone_id: undefined,
                 delivery_address: '',
+                whatsapp_phone: '',
+                whatsapp_opt_in: false,
             })
         }
-    }, [customer, reset, zones])
+    }, [customer, reset])
 
     const onSubmit = async (data: CustomerInput) => {
         setLoading(true)
         try {
             const finalData = {
                 ...data,
-                delivery_address: data.delivery_address || data.person.address_1
+                delivery_address: data.delivery_address || data.person.address_1,
             }
             if (customer) {
                 await updateCustomer(customer.id, finalData)
@@ -140,9 +115,10 @@ export default function CustomerFormDialog({
                 showToast('success', 'Customer created successfully')
             }
             onSaved()
+            onOpenChange(false)
         } catch (error) {
-            console.error('Error saving customer:', error)
-            showToast('error', 'Failed to save customer')
+            console.error('Failed to save customer:', error)
+            showToast('error', 'Failed to save customer. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -150,7 +126,7 @@ export default function CustomerFormDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{customer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
                 </DialogHeader>
@@ -158,76 +134,59 @@ export default function CustomerFormDialog({
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>First Name <span className="text-red-500">*</span></Label>
-                            <Input {...register('person.first_name', { required: true })} />
+                            <Label>First Name *</Label>
+                            <Input
+                                {...register('person.first_name', { required: 'First name is required' })}
+                                placeholder="First name"
+                            />
+                            {errors.person?.first_name && (
+                                <p className="text-sm text-red-500">{errors.person.first_name.message}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
-                            <Label>Last Name <span className="text-red-500">*</span></Label>
-                            <Input {...register('person.last_name', { required: true })} />
+                            <Label>Last Name *</Label>
+                            <Input
+                                {...register('person.last_name', { required: 'Last name is required' })}
+                                placeholder="Last name"
+                            />
+                            {errors.person?.last_name && (
+                                <p className="text-sm text-red-500">{errors.person.last_name.message}</p>
+                            )}
                         </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Company Name</Label>
-                        <Input {...register('company_name')} placeholder="Optional" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2 relative zone-selector-container">
-                            <Label>Delivery Zone</Label>
-                            <div className="relative">
-                                <Input
-                                    type="text"
-                                    placeholder="Search and select zone..."
-                                    value={zoneSearch}
-                                    onChange={(e) => {
-                                        setZoneSearch(e.target.value)
-                                        setShowZoneDropdown(true)
-                                        if (!e.target.value) {
-                                            setValue('zone_id', undefined)
-                                            setSelectedZone(null)
-                                        }
-                                    }}
-                                    onFocus={() => setShowZoneDropdown(true)}
-                                    className="w-full text-black dark:text-white"
-                                />
-                                {showZoneDropdown && (
-                                    <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md max-h-60 overflow-y-auto bg-white dark:bg-zinc-950 border-input">
-                                        {zones.filter(z => z.zone_name.toLowerCase().includes(zoneSearch.toLowerCase())).length > 0 ? (
-                                            zones.filter(z => z.zone_name.toLowerCase().includes(zoneSearch.toLowerCase())).map((zone) => (
-                                                <div
-                                                    key={zone.id}
-                                                    className="px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground text-sm text-black dark:text-white"
-                                                    onClick={() => {
-                                                        setValue('zone_id', zone.id)
-                                                        setSelectedZone(zone)
-                                                        setZoneSearch(zone.zone_name)
-                                                        setShowZoneDropdown(false)
-                                                    }}
-                                                >
-                                                    {zone.zone_name} {zone.description ? `(${zone.description})` : ''}
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="px-3 py-2 text-sm text-muted-foreground">
-                                                No zones found
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <input type="hidden" {...register('zone_id')} />
+                        <div className="space-y-2">
+                            <Label>Company Name</Label>
+                            <Input {...register('company_name')} placeholder="Optional company" />
                         </div>
+                        <div className="space-y-2">
+                            <Label>Discount %</Label>
+                            <Input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                {...register('discount_percent', { valueAsNumber: true })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <ZoneSelector
+                            selectedZoneId={selectedZoneId}
+                            onSelectZone={(zoneId) => setValue('zone_id', zoneId)}
+                        />
                         <div className="space-y-2">
                             <Label>Phone</Label>
                             <Input
                                 {...register('person.phone_number', {
                                     pattern: {
                                         value: /^[\d\s\-\+\(\)]+$/,
-                                        message: 'Invalid phone number'
-                                    }
+                                        message: 'Invalid phone number',
+                                    },
                                 })}
-                                placeholder="e.g., +1 (555) 123-4567"
+                                placeholder="e.g., 0300 1234567"
                             />
                             {errors.person?.phone_number && (
                                 <p className="text-sm text-red-500">{errors.person.phone_number.message}</p>
@@ -235,29 +194,42 @@ export default function CustomerFormDialog({
                         </div>
                     </div>
 
+                    {/* Modular WhatsApp Opt-in Section */}
+                    <CustomerWhatsAppSection register={register} />
+
                     <div className="space-y-2">
-                        <Label>Address</Label>
-                        <Input {...register('person.address_1')} placeholder="Street address" />
+                        <Label>Delivery / Street Address</Label>
+                        <Input
+                            {...register('person.address_1')}
+                            placeholder="Plaza, street, sector, house number"
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>City</Label>
-                            <Input {...register('person.city')} />
+                            <Input {...register('person.city')} placeholder="Rawalpindi / Islamabad" />
                         </div>
                         <div className="space-y-2">
-                            <Label>Discount %</Label>
-                            <Input type="number" step="0.01" {...register('discount_percent', { valueAsNumber: true })} />
+                            <Label>Alternate Delivery Address</Label>
+                            <Input
+                                {...register('delivery_address')}
+                                placeholder="Optional specific landmark/gate"
+                            />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Comments</Label>
-                        <Textarea {...register('person.comments')} rows={3} />
+                        <Label>Comments / Notes</Label>
+                        <Textarea
+                            {...register('person.comments')}
+                            placeholder="Delivery instructions, preferred times..."
+                            rows={2}
+                        />
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={loading}>

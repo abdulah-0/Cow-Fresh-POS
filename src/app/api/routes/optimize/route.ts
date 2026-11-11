@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export interface RouteStopInput {
     id: number | string
@@ -54,6 +55,12 @@ function buildHaversineFallback(stops: RouteStopInput[], reason: string) {
 
 export async function POST(req: NextRequest) {
     try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
         const body = await req.json()
         const stops: RouteStopInput[] = body.stops
 
